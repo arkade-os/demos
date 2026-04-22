@@ -1,0 +1,16 @@
+{
+  "name": "typescript-escrow-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node index.ts"
+  },
+  "dependencies": {
+    "@arkade-os/sdk": "0.4.10",
+    "@scure/base": "^2.0.0",
+    "@scure/btc-signer": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2"
+  }
+}
