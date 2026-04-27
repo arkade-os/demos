@@ -6,9 +6,6 @@
     "dev": "node index.ts"
   },
   "dependencies": {
-    "@arkade-os/sdk": "0.4.10"
-  },
-  "devDependencies": {
-    "@types/node": "^25.5.2"
+    "@arkade-os/sdk": "^0.4.20"
   }
 }
