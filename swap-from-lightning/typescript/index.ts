@@ -302,4 +302,4 @@ console.log("Finalized checkpoint transactions:", finalizedCheckpointTxs);
 console.log("Finalizing transaction...");
 await operator.finalizeTx(txid, finalizedCheckpointTxs);
 
-console.log("Broadcasted!", `https://arkade.space/tx/${txid}`);
+console.log("Broadcasted!", `https://explorer.mutinynet.arkade.sh/tx/${txid}`);
