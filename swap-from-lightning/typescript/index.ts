@@ -47,6 +47,7 @@ console.log("Setting up user identity...");
 const _userIdentity = MnemonicIdentity.fromMnemonic(ALICE_SEED, {
   isMainnet: false,
 });
+console.log("Modifying signer to add ConditionWitness PSBT fields...");
 const userIdentity = {
   xOnlyPublicKey: async () => await _userIdentity.xOnlyPublicKey(),
   compressedPublicKey: async () => await _userIdentity.compressedPublicKey(),
@@ -66,6 +67,7 @@ const userIdentity = {
 };
 const userPubkey = await userIdentity.xOnlyPublicKey();
 const userPubkeyCompressed = await userIdentity.compressedPublicKey();
+console.log("User public key:", [hex.encode(userPubkey)]);
 
 console.log("Connecting to Arkade operator...");
 const operator = new RestArkProvider(OPERATOR_URL);
@@ -80,6 +82,7 @@ const exitTimelock = {
 const checkpointTapscript = CSVMultisigTapscript.decode(
   hex.decode(operatorInfo.checkpointTapscript),
 );
+console.log("Operator public key:", [hex.encode(operatorPubkey)]);
 
 console.log("Connecting to delegate...");
 const delegate = new RestDelegatorProvider(DELEGATE_URL);
@@ -87,6 +90,7 @@ const delegateInfo = await delegate.getDelegateInfo();
 const delegatePubkey = await ReadonlySingleKey.fromPublicKey(
   hex.decode(delegateInfo.pubkey),
 ).xOnlyPublicKey();
+console.log("Delegate public key:", [hex.encode(delegatePubkey)]);
 
 console.log("Generating user tapscript...");
 const userScript = new DelegateVtxo.Script({
@@ -116,6 +120,7 @@ if (isNewSwap) {
       min: BigInt(limits.BTC.ARK.limits.minimal),
       max: BigInt(limits.BTC.ARK.limits.maximal),
     }));
+  console.log("Fetched reverse swap limits:", limits);
 
   if (INVOICE_AMOUNT < limits.min) {
     throw new Error(
@@ -129,7 +134,9 @@ if (isNewSwap) {
   }
 }
 
-console.log("Fetching swap details...");
+console.log(
+  isNewSwap ? "Creating reverse swap..." : "Fetching reverse swap details...",
+);
 const swap = await ky
   .post(`${BOLTZ_API}/v2/swap/reverse`, {
     json: {
@@ -159,6 +166,7 @@ const swap = await ky
     /** BOLT11-encoded Lightning invoice to be paid. */
     invoice: string;
   }>();
+
 const refundPubkey = await ReadonlySingleKey.fromPublicKey(
   hex.decode(swap.refundPublicKey),
 ).xOnlyPublicKey();
@@ -201,15 +209,12 @@ if (isNewSwap) {
       },
     });
   }
-  console.log(`
-New swap created!
-
-Invoice:
-- ${swap.invoice}
-
-Lockup address:
-- ${swap.lockupAddress}
-`);
+  console.log(`Created reverse swap:`, {
+    preimage: hex.encode(preimage),
+    invoice: swap.invoice,
+    lockupAddress: swap.lockupAddress,
+    refundLocktime: refundLocktime,
+  });
   if (isNewSwap) {
     throw new Error(`
 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
@@ -221,12 +226,18 @@ Lockup address:
 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 `);
   }
+} else {
+  console.log(`Fetched reverse swap:`, {
+    preimage: hex.encode(preimage),
+    lockupAddress: contractAddress.encode(),
+    refundLocktime: refundLocktime,
+  });
 }
 
 console.log("Connecting to indexer...");
 const indexer = new RestIndexerProvider("https://mutinynet.arkade.sh");
 
-console.log("Fetching inputs...");
+console.log("Fetching inputs for contract...");
 const inputs = await indexer
   .getVtxos({
     scripts: [hex.encode(contractScript.pkScript)],
@@ -238,6 +249,7 @@ const inputs = await indexer
       .filter((input) => !input.assets?.length),
   );
 const inputTotal = inputs.reduce((sum, input) => sum + BigInt(input.value), 0n);
+console.log("Contract balance:", [inputTotal]);
 
 if (inputTotal === 0n) {
   throw new Error(`Lockup address not funded.
