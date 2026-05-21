@@ -21,7 +21,7 @@ import ky from "ky";
 
 const PREIMAGE = "" as const;
 const REFUND_LOCKTIME = 0n as const;
-const INVOICE_AMOUNT = 50_000n;
+const INVOICE_AMOUNT = 1_000n;
 
 const ALICE_SEED =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
