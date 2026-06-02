@@ -98,10 +98,11 @@ const inputs = await indexer
       /** Filter out inputs with Arkade assets */
       .filter((input) => !input.assets?.length)
       /** Filter only delegatable inputs */
-      .filter((input) =>
-        ["settled", "preconfirmed", "swept"].includes(
-          input.virtualStatus.state,
-        ),
+      .filter(
+        (input) =>
+          ["settled", "preconfirmed", "swept"].includes(
+            input.virtualStatus.state,
+          ) && !input.isSpent,
       )
       /** Add fields to allow input to be spent */
       .map((input) => ({
