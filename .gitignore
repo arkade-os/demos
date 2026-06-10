@@ -1,2 +1,4 @@
 */typescript/node_modules/*
 */golang/golang-*-demo
+*/rust/target/*
+*/rust/Cargo.lock
