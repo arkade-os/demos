@@ -1,0 +1,558 @@
+import { hex } from '@scure/base';
+import * as P from 'micro-packed';
+import { Address, OutScript, checkScript, tapLeafHash } from "./payment.js";
+import * as psbt from "./psbt.js";
+import { CompactSizeLen, RawWitness, Script, VarBytes } from "./script.js";
+import { SignatureHash, Transaction, getInputType, getPrevOut, inputBeforeSign, normalizeInput, toVsize, } from "./transaction.js";
+import { NETWORK, PubT, TAPROOT_UNSPENDABLE_KEY, compareBytes, equalBytes, isBytes, sha256, validatePubkey, } from "./utils.js";
+const encodeTapBlock = (item) => psbt.TaprootControlBlock.encode(item);
+function iterLeafs(tapLeafScript, sigSize, customScripts) {
+    const _tapLeafScript = tapLeafScript;
+    const _customScripts = customScripts;
+    if (!_tapLeafScript || !_tapLeafScript.length)
+        throw new Error('no leafs');
+    // Dummy non-empty Schnorr signature bytes for weight estimation.
+    // Unsigned tr_ms slots use P.EMPTY below.
+    const empty = () => new Uint8Array(sigSize);
+    // If user want to select specific leaf, which can signed,
+    // it is possible to remove all other leafs manually.
+    // Sort leafs by control block length.
+    const leafs = _tapLeafScript.sort((a, b) => encodeTapBlock(a[0]).length - encodeTapBlock(b[0]).length);
+    for (const [cb, _script] of leafs) {
+        // Last byte is version
+        const script = _script.slice(0, -1);
+        const ver = _script[_script.length - 1];
+        const outs = OutScript.decode(script);
+        let signatures = [];
+        if (outs.type === 'tr_ms') {
+            const m = outs.m;
+            const n = outs.pubkeys.length - m;
+            for (let i = 0; i < m; i++)
+                signatures.push(empty());
+            for (let i = 0; i < n; i++)
+                signatures.push(P.EMPTY);
+        }
+        else if (outs.type === 'tr_ns') {
+            for (const _pub of outs.pubkeys)
+                signatures.push(empty());
+        }
+        else {
+            if (!_customScripts)
+                throw new Error('Finalize: Unknown tapLeafScript');
+            const leafHash = tapLeafHash(script, ver);
+            for (const c of _customScripts) {
+                if (!c.finalizeTaproot)
+                    continue;
+                const scriptDecoded = Script.decode(script);
+                const csEncoded = c.encode(scriptDecoded);
+                if (csEncoded === undefined)
+                    continue;
+                const pubKeys = scriptDecoded.filter((i) => {
+                    if (!isBytes(i))
+                        return false;
+                    try {
+                        validatePubkey(i, PubT.schnorr);
+                        return true;
+                    }
+                    catch (e) {
+                        return false;
+                    }
+                });
+                const finalized = c.finalizeTaproot(script, csEncoded, pubKeys.map((pubKey) => [{ pubKey, leafHash }, empty()]));
+                if (!finalized)
+                    continue;
+                return finalized.concat(encodeTapBlock(cb));
+            }
+            // UTXO selection may run without the real signer/finalizer process. When no matching local
+            // finalizeTaproot hook exists, keep a minimal script-path witness lower bound here instead of
+            // failing selection; callers that need exact fee estimates must provide the matching hook.
+        }
+        // Witness is stack, so last element will be used first
+        return signatures.reverse().concat([script, encodeTapBlock(cb)]);
+    }
+    throw new Error('there was no witness');
+}
+function estimateInput(inputType, input, opts) {
+    const _input = input;
+    const _opts = opts;
+    let script = P.EMPTY;
+    let witness;
+    // schnorr sig is always 64 bytes. except for cases when sighash is not default!
+    if (inputType.txType === 'taproot') {
+        const SCHNORR_SIG_SIZE = inputType.sighash !== SignatureHash.DEFAULT ? 65 : 64;
+        // BIP371 `PSBT_IN_TAP_INTERNAL_KEY` is signer metadata, but UTXO selection
+        // runs before signer availability is known. We intentionally treat a
+        // present internal key as a key-path hint here to avoid overestimating fees
+        // on the online side. Callers that know only script-path signing is
+        // possible should omit `tapInternalKey` or pre-filter `tapLeafScript`
+        // before estimation.
+        if (_input.tapInternalKey && !equalBytes(_input.tapInternalKey, TAPROOT_UNSPENDABLE_KEY)) {
+            witness = [new Uint8Array(SCHNORR_SIG_SIZE)];
+        }
+        else if (_input.tapLeafScript) {
+            witness = iterLeafs(_input.tapLeafScript, SCHNORR_SIG_SIZE, _opts.customScripts);
+        }
+        else
+            throw new Error('estimateInput/taproot: unknown input');
+    }
+    else {
+        // It is possible to grind signatures until they have minimal size, but
+        // that changes the fee by +N satoshi. It would make estimation exact, but
+        // is very hard for multisig because every signature would need to stay small.
+        const empty = () => new Uint8Array(72); // max size of sigs
+        const emptyPub = () => new Uint8Array(33); // size of pubkey
+        let inputScript = P.EMPTY;
+        let inputWitness = [];
+        const ltype = inputType.last.type;
+        if (ltype === 'ms') {
+            const m = inputType.last.m;
+            const sig = [0];
+            for (let i = 0; i < m; i++)
+                sig.push(empty());
+            inputScript = Script.encode(sig);
+        }
+        else if (ltype === 'pk') {
+            // 71 sig + 1 sighash
+            inputScript = Script.encode([empty()]);
+        }
+        else if (ltype === 'pkh') {
+            inputScript = Script.encode([empty(), emptyPub()]);
+        }
+        else if (ltype === 'wpkh') {
+            inputScript = P.EMPTY;
+            inputWitness = [empty(), emptyPub()];
+        }
+        else if (ltype === 'unknown' && !_opts.allowUnknownInputs)
+            throw new Error('Unknown inputs are not allowed');
+        if (inputType.type.includes('wsh-')) {
+            // P2WSH
+            if (inputScript.length && inputType.lastScript.length) {
+                inputWitness = Script.decode(inputScript).map((i) => {
+                    if (i === 0)
+                        return P.EMPTY;
+                    if (isBytes(i))
+                        return i;
+                    throw new Error(`Wrong witness op=${i}`);
+                });
+            }
+            inputWitness = inputWitness.concat(inputType.lastScript);
+        }
+        if (inputType.txType === 'segwit')
+            witness = inputWitness;
+        if (inputType.type.startsWith('sh-wsh-')) {
+            script = Script.encode([Script.encode([0, new Uint8Array(sha256.outputLen)])]);
+        }
+        else if (inputType.type.startsWith('sh-')) {
+            script = Script.encode([...Script.decode(inputScript), inputType.lastScript]);
+        }
+        else if (inputType.type.startsWith('wsh-')) {
+        }
+        else if (inputType.txType !== 'segwit')
+            script = inputScript;
+    }
+    let weight = 160 + 4 * VarBytes.encode(script).length;
+    let hasWitnesses = false;
+    if (witness) {
+        weight += RawWitness.encode(witness).length;
+        hasWitnesses = true;
+    }
+    return { weight, hasWitnesses };
+}
+// Exported for tests, internal method
+export const _cmpBig = (a, b) => {
+    // Array.sort comparators must return a number, so normalize bigint comparisons to -1/0/1
+    // instead of coercing large differences through Number(...) and losing ordering precision.
+    const n = a - b;
+    if (n < 0n)
+        return -1;
+    else if (n > 0n)
+        return 1;
+    return 0;
+};
+function getScript(o, opts = {}, network = NETWORK) {
+    const _o = o;
+    const _opts = opts;
+    let script;
+    if ('script' in _o && isBytes(_o.script)) {
+        script = _o.script;
+    }
+    if ('address' in _o) {
+        if (typeof _o.address !== 'string')
+            throw new Error(`Estimator: wrong output address=${_o.address}`);
+        // Address.decode() only yields known descriptors for valid output addresses, but the wrapped
+        // coder type still includes `undefined`, so narrow before re-encoding the script template.
+        script = OutScript.encode(Address(network).decode(_o.address));
+    }
+    if (!script)
+        throw new Error('Estimator: wrong output script');
+    if (typeof _o.amount !== 'bigint')
+        throw new Error(`Estimator: wrong output amount=${_o.amount}, should be of type bigint but got ${typeof _o.amount}.`);
+    // Keep selector-only `createTx: false` flows aligned with the transaction/PSBT output boundary:
+    // satoshi-denominated outputs are not allowed to go negative.
+    if (_o.amount < 0n)
+        throw new Error(`Estimator: wrong output amount=${_o.amount}`);
+    if (script && !_opts.allowUnknownOutputs && OutScript.decode(script).type === 'unknown') {
+        throw new Error('Estimator: unknown output script type, there is a chance that input is unspendable. Pass allowUnknownOutputs=true, if you sure');
+    }
+    if (!_opts.disableScriptCheck)
+        checkScript(script);
+    return script;
+}
+// class, because we need to re-use normalized inputs, instead of parsing each time
+// internal stuff, exported for tests only
+export class _Estimator {
+    baseWeight;
+    changeWeight;
+    amount;
+    requiredIndices = [];
+    normalizedInputs;
+    // Dust used in accumExact + change address algo
+    // - change address: can be smaller for segwit
+    // - accumExact: ???
+    dust; // total dust limit (3||opts.dustRelayFeeRate * 182||opts.dust). Default: 546
+    outputs;
+    opts;
+    constructor(inputs, outputs, opts) {
+        this.outputs = outputs;
+        this.opts = opts;
+        if (typeof opts.feePerByte !== 'bigint')
+            throw new Error(`Estimator: wrong feePerByte=${opts.feePerByte}, should be of type bigint but got ${typeof opts.feePerByte}.`);
+        // Zero-fee estimation is useful on regtest/in tests, but negative fee rates would make
+        // `getSatoshi(...)` produce nonsensical negative fees throughout selection.
+        if (opts.feePerByte < 0n)
+            throw new Error(`Estimator: feePerByte must be >= 0 satoshi per vbyte`);
+        // Dust stuff
+        // TODO: think about this more:
+        // - current dust filters tx which cannot be relayed by core
+        // - but actual dust meaning is 'can be this amount spent?'
+        // - dust contains full tx size. but we can use other inputs to pay for outputDust (and parially inputsDust)?
+        // - not sure if we can spent anything with feePerByte: 3. It will be relayed, but will it be mined?
+        // - for now it works exactly as bitcoin-core. But will create change/outputs which cannot be spent (reasonable).
+        // Number of bytes needed to create and spend a UTXO.
+        // https://github.com/bitcoin/bitcoin/blob/27a770b34b8f1dbb84760f442edb3e23a0c2420b/src/policy/policy.cpp#L28-L41
+        const inputsDust = 32 + 4 + 1 + 107 + 4; // NOTE: can be smaller for segwit tx?
+        const outputDust = 34; // NOTE: 'nSize = GetSerializeSize(txout)'
+        const dustBytes = opts.dust === undefined ? BigInt(inputsDust + outputDust) : opts.dust;
+        if (typeof dustBytes !== 'bigint') {
+            throw new Error(`Estimator: wrong dust=${opts.dust}, should be of type bigint but got ${typeof opts.dust}.`);
+        }
+        // 3 sat/vb is the default minimum fee rate used to calculate dust thresholds by bitcoin core.
+        // 3000 sat/kvb -> 3 sat/vb.
+        // https://github.com/bitcoin/bitcoin/blob/27a770b34b8f1dbb84760f442edb3e23a0c2420b/src/policy/policy.h#L55
+        const dustFee = opts.dustRelayFeeRate === undefined ? 3n : opts.dustRelayFeeRate;
+        if (typeof dustFee !== 'bigint') {
+            throw new Error(`Estimator: wrong dustRelayFeeRate=${opts.dustRelayFeeRate}, should be of type bigint but got ${typeof opts.dustRelayFeeRate}.`);
+        }
+        // Dust uses feePerbyte by default, but we allow separate dust fee if needed
+        this.dust = dustBytes * dustFee;
+        if (opts.requiredInputs !== undefined && !Array.isArray(opts.requiredInputs))
+            throw new Error(`Estimator: wrong required inputs=${opts.requiredInputs}`);
+        const network = opts.network || NETWORK;
+        let amount = 0n;
+        // Base weight: tx with outputs, no inputs
+        let baseWeight = 32;
+        for (const o of outputs) {
+            const script = getScript(o, opts, opts.network);
+            baseWeight += 32 + 4 * VarBytes.encode(script).length;
+            amount += o.amount;
+        }
+        if (typeof opts.changeAddress !== 'string')
+            throw new Error(`Estimator: wrong change address=${opts.changeAddress}`);
+        let changeWeight = baseWeight +
+            32 +
+            // Same Address.decode() narrowing as above: the estimator only reaches this path for a
+            // concrete change output address, not an unknown descriptor.
+            4 *
+                VarBytes.encode(OutScript.encode(Address(network).decode(opts.changeAddress))).length;
+        baseWeight += 4 * CompactSizeLen.encode(outputs.length).length;
+        // If there a lot of outputs change can change fee
+        changeWeight += 4 * CompactSizeLen.encode(outputs.length + 1).length;
+        this.baseWeight = baseWeight;
+        this.changeWeight = changeWeight;
+        this.amount = amount;
+        const allInputs = Array.from(inputs);
+        if (opts.requiredInputs) {
+            for (let i = 0; i < opts.requiredInputs.length; i++)
+                this.requiredIndices.push(allInputs.push(opts.requiredInputs[i]) - 1);
+        }
+        const inputKeys = new Set();
+        this.normalizedInputs = allInputs.map((i) => {
+            const normalized = normalizeInput(i, undefined, undefined, opts.disableScriptCheck, opts.allowUnknown);
+            inputBeforeSign(normalized); // check fields
+            const key = `${hex.encode(normalized.txid)}:${normalized.index}`;
+            if (!opts.allowSameUtxo && inputKeys.has(key))
+                throw new Error(`Estimator: same input passed multiple times: ${key}`);
+            inputKeys.add(key);
+            const inputType = getInputType(normalized, opts.allowLegacyWitnessUtxo);
+            const prev = getPrevOut(normalized);
+            const estimate = estimateInput(inputType, normalized, this.opts);
+            const value = prev.amount - opts.feePerByte * BigInt(toVsize(estimate.weight)); // value = amount-fee
+            return { inputType, normalized, amount: prev.amount, value, estimate };
+        });
+    }
+    checkInputIdx(idx) {
+        if (!Number.isSafeInteger(idx) || 0 > idx || idx >= this.normalizedInputs.length)
+            throw new Error(`Wrong input index=${idx}`);
+        return idx;
+    }
+    sortIndices(indices) {
+        return indices.slice().sort((a, b) => {
+            const ai = this.normalizedInputs[this.checkInputIdx(a)];
+            const bi = this.normalizedInputs[this.checkInputIdx(b)];
+            const out = compareBytes(ai.normalized.txid, bi.normalized.txid);
+            if (out !== 0)
+                return out;
+            return ai.normalized.index - bi.normalized.index;
+        });
+    }
+    sortOutputs(outputs) {
+        const scripts = outputs.map((o) => getScript(o, this.opts, this.opts.network));
+        const indices = outputs.map((_, j) => j);
+        return indices.sort((a, b) => {
+            const aa = outputs[a].amount;
+            const ba = outputs[b].amount;
+            const out = _cmpBig(aa, ba);
+            if (out !== 0)
+                return out;
+            return compareBytes(scripts[a], scripts[b]);
+        });
+    }
+    getSatoshi(weight) {
+        return this.opts.feePerByte * BigInt(toVsize(weight));
+    }
+    // Sort by value instead of amount
+    get biggest() {
+        return this.normalizedInputs
+            .map((_i, j) => j)
+            .sort((a, b) => _cmpBig(this.normalizedInputs[b].value, this.normalizedInputs[a].value));
+    }
+    get smallest() {
+        return this.biggest.reverse();
+    }
+    // These assume that UTXO array has historical order.
+    // Otherwise, we have no way to know which tx is oldest
+    // Explorers usually give UTXO in this order.
+    get oldest() {
+        return this.normalizedInputs.map((_i, j) => j);
+    }
+    get newest() {
+        return this.oldest.reverse();
+    }
+    // exact - like blackjack from coinselect.
+    // exact(biggest) will select one big utxo which is closer to targetValue+dust, if possible.
+    // If not, it will accumulate largest utxo until value is close to targetValue+dust.
+    accumulate(indices, exact = false, skipNegative = true, all = false) {
+        // TODO: how to handle change addresses?
+        // - cost of input
+        // - cost of change output (if input requires change)
+        // - cost of output spending
+        // Dust threshold should be significantly bigger, no point in
+        // creating an output, which cannot be spent.
+        // coinselect doesn't consider cost of output address for dust.
+        // Changing that can actually reduce privacy
+        let weight = this.opts.alwaysChange ? this.changeWeight : this.baseWeight;
+        let hasWitnesses = false;
+        let num = 0;
+        let inputsAmount = 0n;
+        const targetAmount = this.amount;
+        const res = new Set();
+        let fee;
+        // BIP144 serialization uses a var_int `txin_count`, so fee accounting must use the post-add
+        // input count here; the CompactSize prefix grows from 1 to 3 bytes at 253 inputs.
+        const getTotal = (newWeight, newNum) => {
+            const totalWeight = newWeight + 4 * CompactSizeLen.encode(newNum).length;
+            return { totalWeight, fee: this.getSatoshi(totalWeight) };
+        };
+        for (const idx of this.requiredIndices) {
+            this.checkInputIdx(idx);
+            if (res.has(idx))
+                throw new Error('required input encountered multiple times'); // should not happen
+            const { estimate, amount } = this.normalizedInputs[idx];
+            let newWeight = weight + estimate.weight;
+            if (!hasWitnesses && estimate.hasWitnesses)
+                newWeight += 2; // enable witness if needed
+            const newNum = num + 1;
+            const total = getTotal(newWeight, newNum);
+            fee = total.fee;
+            weight = newWeight;
+            if (estimate.hasWitnesses)
+                hasWitnesses = true;
+            num = newNum;
+            inputsAmount += amount;
+            res.add(idx);
+            // inputsAmount is enough to cover cost of tx
+            if (!all && targetAmount + fee <= inputsAmount && num >= this.requiredIndices.length)
+                return { indices: Array.from(res), fee, weight: total.totalWeight, total: inputsAmount };
+        }
+        for (const idx of indices) {
+            this.checkInputIdx(idx);
+            if (res.has(idx))
+                continue; // skip required inputs
+            const { estimate, amount, value } = this.normalizedInputs[idx];
+            let newWeight = weight + estimate.weight;
+            if (!hasWitnesses && estimate.hasWitnesses)
+                newWeight += 2; // enable witness if needed
+            const newNum = num + 1;
+            const total = getTotal(newWeight, newNum);
+            fee = total.fee;
+            // Best case scenario exact(biggest) -> we find biggest output, less than target+threshold
+            if (exact && amount + inputsAmount > targetAmount + fee + this.dust)
+                continue; // skip if added value is bigger than dust
+            // Negative: cost of using input is more than value provided (negative)
+            // By default 'blackjack' mode in coinselect doesn't use that, which means
+            // it will use negative output if sorted by 'smallest'
+            if (skipNegative && value <= 0n)
+                continue;
+            weight = newWeight;
+            if (estimate.hasWitnesses)
+                hasWitnesses = true;
+            num = newNum;
+            inputsAmount += amount;
+            res.add(idx);
+            // inputsAmount is enough to cover cost of tx
+            if (!all && targetAmount + fee <= inputsAmount)
+                return { indices: Array.from(res), fee, weight: total.totalWeight, total: inputsAmount };
+        }
+        if (all) {
+            const total = getTotal(weight, num);
+            return {
+                indices: Array.from(res),
+                fee: total.fee,
+                weight: total.totalWeight,
+                total: inputsAmount,
+            };
+        }
+        return undefined;
+    }
+    // Works like coinselect default method
+    default() {
+        const { biggest } = this;
+        const exact = this.accumulate(biggest, true, false);
+        if (exact)
+            return exact;
+        return this.accumulate(biggest);
+    }
+    select(strategy) {
+        if (strategy === 'all') {
+            return this.accumulate(this.normalizedInputs.map((_, j) => j), false, true, true);
+        }
+        if (strategy === 'default')
+            return this.default();
+        const data = {
+            Oldest: () => this.oldest,
+            Newest: () => this.newest,
+            Smallest: () => this.smallest,
+            Biggest: () => this.biggest,
+        };
+        if (strategy.startsWith('exact')) {
+            // Reject malformed `exact...` strings up front so a successful exact match cannot hide
+            // a missing or garbage `/accum...` fallback suffix.
+            const parts = strategy.split('/');
+            if (parts.length !== 2)
+                throw new Error(`Estimator.select: wrong strategy=${strategy}`);
+            const [exactStrategy, left] = parts;
+            const exactData = exactStrategy.slice(5);
+            if (!data[exactData])
+                throw new Error(`Estimator.select: wrong strategy=${strategy}`);
+            if (!left.startsWith('accum'))
+                throw new Error(`Estimator.select: wrong strategy=${strategy}`);
+            strategy = left;
+            const exact = this.accumulate(data[exactData](), true, true);
+            if (exact)
+                return exact;
+        }
+        if (strategy.startsWith('accum')) {
+            const accumData = strategy.slice(5);
+            if (!data[accumData])
+                throw new Error(`Estimator.select: wrong strategy=${strategy}`);
+            return this.accumulate(data[accumData]());
+        }
+        throw new Error(`Estimator.select: wrong strategy=${strategy}`);
+    }
+    result(strategy) {
+        const s = this.select(strategy);
+        if (!s)
+            return;
+        const { indices, weight, total } = s;
+        let needChange = this.opts.alwaysChange;
+        const changeWeight = this.opts.alwaysChange
+            ? weight
+            : weight + (this.changeWeight - this.baseWeight);
+        const changeFee = this.getSatoshi(changeWeight);
+        let fee = s.fee;
+        // If dust suppresses the change output, the leftover becomes additional miner fee, so
+        // the returned fee/weight need to follow the no-change transaction shape instead of changeWeight.
+        const change = total - this.amount - changeFee;
+        if (change > this.dust)
+            needChange = true;
+        else if (!needChange)
+            fee = total - this.amount;
+        let inputs = indices;
+        let outputs = Array.from(this.outputs);
+        if (needChange) {
+            fee = changeFee;
+            // this shouldn't happen!
+            if (change < 0n)
+                throw new Error(`Estimator.result: negative change=${change}`);
+            outputs.push({ address: this.opts.changeAddress, amount: change });
+        }
+        if (this.opts.bip69) {
+            inputs = this.sortIndices(inputs);
+            outputs = this.sortOutputs(outputs).map((i) => outputs[i]);
+        }
+        const res = {
+            inputs: inputs.map((i) => this.normalizedInputs[i].normalized),
+            outputs,
+            fee,
+            weight: needChange ? changeWeight : s.weight,
+            change: !!needChange,
+        };
+        let tx;
+        if (this.opts.createTx) {
+            const { inputs, outputs } = res;
+            tx = new Transaction(this.opts);
+            for (const i of inputs)
+                tx.addInput(i);
+            for (const o of outputs)
+                tx.addOutput({ ...o, script: getScript(o, this.opts, this.opts.network) });
+        }
+        return Object.assign(res, { tx });
+        // return { ...res, tx: tx };
+    }
+}
+/**
+ * Selects inputs for the requested outputs using the configured strategy.
+ * @param inputs - candidate inputs that may be selected
+ * @param outputs - desired transaction outputs
+ * @param strategy - selection heuristic to use
+ * @param opts - Fee-estimation and transaction-construction options. See {@link EstimatorOpts}.
+ * @returns Selection result, optionally including a constructed transaction.
+ * @throws If the UTXO set, outputs, or estimator options are invalid. {@link Error}
+ * @example
+ * Estimate fees, pick inputs, and build a transaction for the selected set.
+ * ```ts
+ * import { p2wpkh } from '@scure/btc-signer/payment.js';
+ * import { pubECDSA, randomPrivateKeyBytes } from '@scure/btc-signer/utils.js';
+ * import { selectUTXO } from '@scure/btc-signer/utxo.js';
+ * import { hex } from '@scure/base';
+ * const spend = p2wpkh(pubECDSA(randomPrivateKeyBytes()));
+ * const change = p2wpkh(pubECDSA(randomPrivateKeyBytes()));
+ * selectUTXO(
+ *   [{
+ *     txid: hex.decode('0000000000000000000000000000000000000000000000000000000000000001'),
+ *     index: 0,
+ *     witnessUtxo: { amount: 50_000n, script: spend.script },
+ *   }],
+ *   [{ address: spend.address!, amount: 10_000n }],
+ *   'default',
+ *   { feePerByte: 1n, changeAddress: change.address! }
+ * );
+ * ```
+ */
+export function selectUTXO(inputs, outputs, strategy, opts) {
+    // Public wrapper defaults to BIP69 ordering and tx construction unless callers override them.
+    const _opts = { createTx: true, bip69: true, ...opts };
+    const est = new _Estimator(inputs, outputs, _opts);
+    return est.result(strategy);
+}
+//# sourceMappingURL=utxo.js.map

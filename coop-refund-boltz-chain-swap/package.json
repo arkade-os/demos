@@ -1,0 +1,20 @@
+{
+  "name": "coop-refund-boltz-chain-swap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "tiero",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0",
+    "@scure/base": "^2.2.0",
+    "@scure/btc-signer": "^2.2.0",
+    "boltz-core": "^5.0.0"
+  }
+}
