@@ -26,11 +26,11 @@ const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
  */
 (globalThis as any).EventSource = EventSource;
 
-/** 2. Create SQL executor */
-const createSQLExecutor = (dbPath: string): SQLExecutor => {
+/** 2. Initialize SQLite database */
+const initDB = (dbPath: string) => {
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
-  return {
+  const sqlExecutor = {
     run: async (sql, params) => {
       db.prepare(sql).run(...(params ?? []));
     },
@@ -38,9 +38,11 @@ const createSQLExecutor = (dbPath: string): SQLExecutor => {
       db.prepare(sql).get(...(params ?? [])) as T | undefined,
     all: async <T>(sql: string, params?: unknown[]) =>
       db.prepare(sql).all(...(params ?? [])) as T[],
-  };
+  } as const satisfies SQLExecutor;
+  const closeDB = () => db.close();
+  return { sqlExecutor, closeDB };
 };
-const executor = createSQLExecutor("wallet.sqlite");
+const { sqlExecutor, closeDB } = initDB("wallet.sqlite");
 
 /** 3. Create identity */
 const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
@@ -63,12 +65,12 @@ const wallet = await Wallet.create({
    */
   walletMode: "static",
   /**
-   * Explicitly use SQLite storage
+   * Explicitly use in-memory storage
    * Defaults to IndexedDB if undefined
    */
   storage: {
-    walletRepository: new SQLiteWalletRepository(executor),
-    contractRepository: new SQLiteContractRepository(executor),
+    walletRepository: new SQLiteWalletRepository(sqlExecutor),
+    contractRepository: new SQLiteContractRepository(sqlExecutor),
   },
 });
 
@@ -97,7 +99,7 @@ const extractAssetBundles = (outputs: ExtendedVirtualCoin[]) =>
 console.log("Initial asset bundles:", extractAssetBundles(outputs));
 
 /** 7. Subscribe for incoming funds */
-wallet.notifyIncomingFunds(async (event) => {
+const stopNotifying = await wallet.notifyIncomingFunds(async (event) => {
   /** Ignore boarding inputs */
   if (event.type === "utxo") return;
   const { spentVtxos, newVtxos } = event;
@@ -108,11 +110,30 @@ wallet.notifyIncomingFunds(async (event) => {
   if (newVtxos.length) {
     console.log("New bundles:", extractAssetBundles(newVtxos));
   }
-  await wallet.dispose();
 });
 
 console.log("Listening for incoming assets...");
 console.log("Deposit address:", await wallet.getAddress());
-console.log("(ctrl-C to close)");
+console.log("(press Enter to close)");
 
-// TODO: Add graceful shutdown
+/** 8. Graceful shutdown */
+if (process.stdin.isTTY) {
+  process.stdin.resume();
+  process.stdin.once("data", async () => {
+    try {
+      stopNotifying();
+      console.log("Stopped notifying");
+
+      await wallet.dispose();
+      console.log("Disposed wallet");
+
+      closeDB();
+      console.log("Closed database");
+
+      process.exit(0);
+    } catch (error) {
+      console.error("Error during shutdown", error);
+      process.exit(1);
+    }
+  });
+}
