@@ -4,7 +4,7 @@ import { hex } from "@scure/base";
 const ADDRESS =
   "tark1qqcpq7yq3e8hhsx6ml3fud93m7827qggaurtzu3zwsr4a0qs0gf84fv7fwu6sqrrdnjqlnqu59lq0nvzzu0d8usv7xjvcpyzt35whucrkca56d" as const;
 
-/** 1. Extract script from Arkade address */
+/** 1. Parse as Arkade address */
 const address = ArkAddress.decode(ADDRESS);
 
 /** 2. Log address information, including:
