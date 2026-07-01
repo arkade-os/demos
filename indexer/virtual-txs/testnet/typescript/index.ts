@@ -19,7 +19,7 @@ for (const psbt of txs) {
     console.log(`input #${i}:`, {
       txid: hex.encode(input.txid!),
       vout: input.index!,
-      value: input.witnessUtxo!.amount,
+      value: input.witnessUtxo?.amount,
     });
   }
   for (let i = 0; i < tx.outputsLength; i++) {
