@@ -4,3 +4,4 @@
 - [ ] build + submit delegate intent
 - [ ] finalize pending transactions
 - [ ] boltz swaps
+- [ ] manual subscriptions to indexer
