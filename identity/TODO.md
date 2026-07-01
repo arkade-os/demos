@@ -1,0 +1,99 @@
+- [ ] custom sign function
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] descriptor (readonly)
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] dummy (readonly)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] private key (hex)
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] public key (hex, compressed, readonly)
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] mnemonic
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] npub (readonly)
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] nsec
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] seed
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net

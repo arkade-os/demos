@@ -1,0 +1,177 @@
+- [-] get address
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] get balance
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] boarding (manual)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] collaborative exit
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] consolidate funds (sweep)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] delegated renewal
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] finalize pending transactions
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] notify incoming funds
+  - [-] asset (filtered by ID)
+    - [-] mainnet
+      - [x] typescript
+      - [ ] go
+      - [ ] rust
+      - [ ] .net
+    - [-] testnet
+      - [x] typescript
+      - [ ] go
+      - [ ] rust
+      - [ ] .net
+  - [ ] bitcoin (including boarding inputs)
+    - [ ] mainnet
+      - [ ] typescript
+      - [ ] go
+      - [ ] rust
+      - [ ] .net
+    - [ ] testnet
+      - [ ] typescript
+      - [ ] go
+      - [ ] rust
+      - [ ] .net
+- [-] fetch spendable outputs
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] create op_return
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] create + recover subdust outputs (via vtxo manager)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] send assets (multiple recipients)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] send bitcoin (multiple recipients)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] create + settle preconfirmed outputs (via vtxo manager)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] get transaction history
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net

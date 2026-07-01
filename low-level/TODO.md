@@ -1,0 +1,6 @@
+- [ ] generate arkade address
+- [ ] generate onchain address
+- [ ] build + submit offchain tx
+- [ ] build + submit delegate intent
+- [ ] finalize pending transactions
+- [ ] boltz swaps

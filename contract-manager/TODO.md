@@ -1,0 +1,3 @@
+- [ ] annotate outputs (make spendable)
+- [ ] get all spending paths
+- [ ] create + delete contract
