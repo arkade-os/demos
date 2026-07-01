@@ -61,7 +61,7 @@ const [
 const preimageHash = ripemd160(sha256(hex.decode(PREIMAGE)));
 
 /** 7. Construct VHTLC tapscript */
-const VHTLC_OPTIONS = {
+const VHTLC_SCRIPT_OPTIONS = {
   sender: senderPubkey,
   receiver: receiverPubkey,
   server: operatorPubkey,
@@ -72,7 +72,7 @@ const VHTLC_OPTIONS = {
   unilateralRefundWithoutReceiverDelay,
 } as const satisfies VHTLC.Options;
 
-const vhtlcTapscript = new VHTLC.Script(VHTLC_OPTIONS);
+const vhtlcTapscript = new VHTLC.Script(VHTLC_SCRIPT_OPTIONS);
 
 /** 8. Log user public key, operator public key, exit timelocks, preimage hash, refund locktime, tweaked public key, script public key, and address */
 console.log({

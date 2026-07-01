@@ -51,7 +51,7 @@ const delegatePubkey = hex.decode(delegateInfo.pubkey).slice(1);
 
 /** 8. Construct default + delegated + boarding tapscripts for each deprecated signer */
 const deprecatedTapscripts = deprecatedOperatorPubkeys.map((operatorPubkey) => {
-  const defaultTapscript = new DefaultVtxo.Script({
+  const paymentTapscript = new DefaultVtxo.Script({
     pubKey: userPubkey,
     serverPubKey: operatorPubkey,
     csvTimelock: unilateralExitTimelock,
@@ -69,7 +69,7 @@ const deprecatedTapscripts = deprecatedOperatorPubkeys.map((operatorPubkey) => {
   });
   return {
     operatorPubkey,
-    defaultTapscript,
+    paymentTapscript,
     delegatedTapscript,
     boardingTapscript,
   } as const;
@@ -80,7 +80,7 @@ console.log(
   deprecatedTapscripts.flatMap(
     ({
       operatorPubkey,
-      defaultTapscript,
+      paymentTapscript,
       delegatedTapscript,
       boardingTapscript,
     }) => [
@@ -88,9 +88,9 @@ console.log(
         userPubkey: hex.encode(userPubkey),
         operatorPubkey: hex.encode(operatorPubkey),
         exitTimelock: unilateralExitTimelock,
-        tweakedPubKey: hex.encode(defaultTapscript.tweakedPublicKey),
-        scriptPubKey: hex.encode(defaultTapscript.pkScript),
-        address: defaultTapscript
+        tweakedPubKey: hex.encode(paymentTapscript.tweakedPublicKey),
+        scriptPubKey: hex.encode(paymentTapscript.pkScript),
+        address: paymentTapscript
           .address(networks.mutinynet.hrp, operatorPubkey)
           .encode(),
       },

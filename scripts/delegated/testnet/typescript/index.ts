@@ -42,14 +42,14 @@ const delegateInfo = await delegate.getDelegateInfo();
 const delegatePubkey = hex.decode(delegateInfo.pubkey).slice(1);
 
 /** 8. Construct delegated tapscript */
-const DELEGATED_VTXO_OPTIONS = {
+const DELEGATED_SCRIPT_OPTIONS = {
   pubKey: userPubkey,
   serverPubKey: operatorPubkey,
   delegatePubKey: delegatePubkey,
   csvTimelock: exitTimelock,
 } as const satisfies DelegateVtxo.Options;
 
-const delegatedTapscript = new DelegateVtxo.Script(DELEGATED_VTXO_OPTIONS);
+const delegatedTapscript = new DelegateVtxo.Script(DELEGATED_SCRIPT_OPTIONS);
 
 /** 7. Log user public key, operator public key, delegate pubkey, exit timelock, tweaked public key, script public key, and address */
 console.log({

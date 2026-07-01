@@ -30,13 +30,13 @@ const exitTimelock = {
 } as const satisfies RelativeTimelock;
 
 /** 6. Construct boarding tapscript */
-const BOARDING_UTXO_OPTIONS = {
+const BOARDING_SCRIPT_OPTIONS = {
   pubKey: userPubkey,
   serverPubKey: operatorPubkey,
   csvTimelock: exitTimelock,
 } as const satisfies DefaultVtxo.Options;
 
-const boardingTapscript = new DefaultVtxo.Script(BOARDING_UTXO_OPTIONS);
+const boardingTapscript = new DefaultVtxo.Script(BOARDING_SCRIPT_OPTIONS);
 
 /** 7. Log user public key, operator public key, exit timelock, tweaked public key, script public key, and onchain address */
 console.log({

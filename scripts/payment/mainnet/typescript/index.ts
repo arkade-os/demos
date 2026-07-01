@@ -28,21 +28,21 @@ const exitTimelock = {
   type: "seconds",
 } as const satisfies RelativeTimelock;
 
-/** 6. Construct default tapscript */
-const DEFAULT_VTXO_OPTIONS = {
+/** 6. Construct payment tapscript */
+const PAYMENT_SCRIPT_OPTIONS = {
   pubKey: userPubkey,
   serverPubKey: operatorPubkey,
   csvTimelock: exitTimelock,
 } as const satisfies DefaultVtxo.Options;
 
-const defaultTapscript = new DefaultVtxo.Script(DEFAULT_VTXO_OPTIONS);
+const paymentTapscript = new DefaultVtxo.Script(PAYMENT_SCRIPT_OPTIONS);
 
 /** 7. Log user public key, operator public key, exit timelock, tweaked public key, script public key, and address */
 console.log({
   userPubkey: hex.encode(userPubkey),
   operatorPubkey: hex.encode(operatorPubkey),
   exitTimelock,
-  tweakedPubKey: hex.encode(defaultTapscript.tweakedPublicKey),
-  scriptPubKey: hex.encode(defaultTapscript.pkScript),
-  address: defaultTapscript.address(undefined, operatorPubkey).encode(),
+  tweakedPubKey: hex.encode(paymentTapscript.tweakedPublicKey),
+  scriptPubKey: hex.encode(paymentTapscript.pkScript),
+  address: paymentTapscript.address(undefined, operatorPubkey).encode(),
 });
