@@ -3,7 +3,6 @@ import {
   MnemonicIdentity,
   type RelativeTimelock,
   RestArkProvider,
-  networks,
 } from "@arkade-os/sdk";
 import { hex } from "@scure/base";
 
@@ -45,5 +44,5 @@ console.log({
   exitTimelock,
   tweakedPubKey: hex.encode(boardingTapscript.tweakedPublicKey),
   scriptPubKey: hex.encode(boardingTapscript.pkScript),
-  address: boardingTapscript.onchainAddress(networks.bitcoin),
+  address: boardingTapscript.onchainAddress(),
 });
