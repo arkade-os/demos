@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node index.ts",
+    "render": "mmdc -i dag.mmd -o dag.svg"
+  },
+  "dependencies": {
+    "@arkade-os/sdk": "^0.4.39",
+    "@scure/base": "^2.2.0"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.15.0",
+    "@types/node": "^26.0.1"
+  }
+}
