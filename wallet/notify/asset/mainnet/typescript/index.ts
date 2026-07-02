@@ -79,18 +79,16 @@ const outputs = await wallet.getVtxos({
 
 /** 6. Flat map into asset 'bundles' (multiple assets can live on the same output) */
 const extractAssetBundles = (outputs: ExtendedVirtualCoin[]) =>
-  outputs.flatMap(
-    ({ txid, vout, value, virtualStatus: { state: status }, assets }) =>
-      (assets || [])
-        /** Filter only matching assets */
-        .filter((asset) => asset.assetId === ASSET_ID)
-        .map((asset) => ({
-          txid,
-          vout,
-          value,
-          status,
-          ...asset,
-        })),
+  outputs.flatMap(({ txid, vout, virtualStatus: { state: status }, assets }) =>
+    (assets || [])
+      /** Filter only matching assets */
+      .filter((asset) => asset.assetId === ASSET_ID)
+      .map((asset) => ({
+        txid,
+        vout,
+        status,
+        ...asset,
+      })),
   );
 
 console.log("Initial asset bundles:", extractAssetBundles(outputs));
@@ -109,7 +107,8 @@ const stopNotifying = await wallet.notifyIncomingFunds(async (event) => {
   }
 });
 
-console.log("Listening for incoming assets...");
+console.log("Listening for incoming deposits...");
+console.log("Filtering for asset ID:", ASSET_ID);
 console.log("Deposit address:", await wallet.getAddress());
 console.log("(press Enter to close)");
 
