@@ -71,10 +71,36 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 5. Log wallet balance */
-console.log(await wallet.getBalance());
+/** 5. Fetch wallet balance */
+const balance = await wallet.getBalance();
 
-/** 6. Graceful shutdown */
+/** 6. Parse assets with metadata */
+const assetDetails = new Map(
+  await Promise.all(
+    balance.assets.map(({ assetId }) =>
+      wallet.assetManager
+        .getAssetDetails(assetId)
+        .then((details) => [assetId, details] as const),
+    ),
+  ),
+);
+
+/** 7. Log balance with parsed assets */
+console.log({
+  ...balance,
+  assets: balance.assets.map(({ assetId, amount }) => ({
+    assetId,
+    controlAssetId: assetDetails.get(assetId)?.controlAssetId,
+    decimals: assetDetails.get(assetId)?.metadata?.decimals,
+    icon: assetDetails.get(assetId)?.metadata?.icon,
+    name: assetDetails.get(assetId)?.metadata?.name,
+    ticker: assetDetails.get(assetId)?.metadata?.ticker,
+    rawAmount: amount,
+    parsedAmount: `${amount / 10n ** BigInt(assetDetails.get(assetId)?.metadata?.decimals || 0)} ${assetDetails.get(assetId)?.metadata?.ticker}`,
+  })),
+});
+
+/** 8. Graceful shutdown */
 console.log("Disposing wallet...");
 await wallet.dispose();
 
