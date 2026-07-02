@@ -1,6 +1,6 @@
 - [-] get address
-  - [ ] mainnet
-    - [ ] typescript
+  - [-] mainnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
@@ -10,8 +10,8 @@
     - [ ] rust
     - [ ] .net
 - [-] get balance
-  - [ ] mainnet
-    - [ ] typescript
+  - [-] mainnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
@@ -43,8 +43,8 @@
     - [ ] rust
     - [ ] .net
 - [-] consolidate funds (sweep)
-  - [ ] mainnet
-    - [ ] typescript
+  - [-] mainnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
@@ -87,20 +87,20 @@
       - [ ] go
       - [ ] rust
       - [ ] .net
-  - [ ] bitcoin (including boarding inputs)
-    - [ ] mainnet
-      - [ ] typescript
+  - [-] bitcoin (including boarding inputs)
+    - [-] mainnet
+      - [x] typescript
       - [ ] go
       - [ ] rust
       - [ ] .net
-    - [ ] testnet
-      - [ ] typescript
+    - [-] testnet
+      - [x] typescript
       - [ ] go
       - [ ] rust
       - [ ] .net
 - [-] fetch spendable outputs
-  - [ ] mainnet
-    - [ ] typescript
+  - [-] mainnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
@@ -121,8 +121,8 @@
     - [ ] rust
     - [ ] .net
 - [-] create + recover subdust outputs (via vtxo manager)
-  - [ ] mainnet
-    - [ ] typescript
+  - [-] mainnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
