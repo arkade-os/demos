@@ -9,16 +9,16 @@ importers:
   .:
     dependencies:
       '@arkade-os/sdk':
-        specifier: ^0.4.40
-        version: 0.4.40
+        specifier: ^0.4.41
+        version: 0.4.41
       '@scure/base':
         specifier: ^2.2.0
         version: 2.2.0
 
 packages:
 
-  '@arkade-os/sdk@0.4.40':
-    resolution: {integrity: sha512-d92VY9KVxSYOigBYSZex9znI8jncN+/1NfnKlyCSkbrXUkmf2izwr/edvZIpQz07VrUEY97VLzxPwC20UVCjRg==}
+  '@arkade-os/sdk@0.4.41':
+    resolution: {integrity: sha512-45dmsZYg5BbAKvbeDHjUTOqM06fcIgdd4UxaDKHaows4y1uriLDD/Ae2RH9dAq8LbHM5TKujXQ8g456xRHnoaA==}
     engines: {node: '>=22.12.0 <25'}
     peerDependencies:
       '@react-native-async-storage/async-storage': '>=1.0.0'
@@ -167,7 +167,7 @@ packages:
 
 snapshots:
 
-  '@arkade-os/sdk@0.4.40':
+  '@arkade-os/sdk@0.4.41':
     dependencies:
       '@bitcoinerlab/descriptors-scure': 3.1.7
       '@marcbachmann/cel-js': 7.3.1
