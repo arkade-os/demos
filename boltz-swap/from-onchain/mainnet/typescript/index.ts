@@ -94,7 +94,7 @@ if (!swaps.swapManager) {
 /** 6. Create onchain > Arkade swap */
 const result = await swaps.btcToArk({
   /**
-   * Amount to be received on Arkade
+   * Amount to be received within Arkade
    * This will automatically adjust the amount to be sent onchain
    * If you want to instead specify a particular amount to send onchain, use senderLockAmount
    */
@@ -105,13 +105,13 @@ console.log("Created onchain > Arkade swap:");
 console.log({
   /** The amount to be paid onchain */
   amountToPay: result.amountToPay,
-  /** The amount that will be delivered on Arkade */
+  /** The amount that will be delivered within Arkade */
   deliveredAmount: result.pendingSwap.amount,
   /** Where the funds will be locked onchain */
   lockupAddress: result.btcAddress,
-  /** Where the funds will be claimed from on Arkade */
+  /** Where the funds will be claimed within Arkade */
   claimAddress: result.pendingSwap.response.claimDetails.lockupAddress,
-  /** The secret preimage that, when revealed, allows the funds to be claimed on Arkade */
+  /** The secret preimage that, when revealed, allows the funds to be claimed within Arkade */
   preimage: result.pendingSwap.preimage,
   /** The ripemd160(sha256()) hash of the preimage */
   paymentHash: result.pendingSwap.request.preimageHash,

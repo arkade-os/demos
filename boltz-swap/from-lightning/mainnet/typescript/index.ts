@@ -101,15 +101,15 @@ console.log("Created Lightning > Arkade swap:");
 console.log({
   /** The amount sent over Lightning */
   invoiceAmount: result.pendingSwap.request.invoiceAmount,
-  /** The amount that will be delivered on Arkade */
+  /** The amount that will be delivered within Arkade */
   deliveredAmount: result.amount,
   /** The description added to the invoice (optional) */
   invoiceDescription: result.pendingSwap.request.description,
   /** When the swap (and corresponding LN invoice) expires */
   expiresAt: new Date((result.pendingSwap.createdAt + result.expiry) * 1000),
-  /** Where the funds will be claimed from on Arkade */
+  /** Where the funds will be claimed within Arkade */
   claimAddress: result.pendingSwap.response.lockupAddress,
-  /** The secret preimage that, when revealed, allows the funds to be claimed on Arkade */
+  /** The secret preimage that, when revealed, allows the funds to be claimed within Arkade */
   preimage: result.preimage,
   /** The ripemd160(sha256()) hash of the preimage */
   paymentHash: result.paymentHash,
