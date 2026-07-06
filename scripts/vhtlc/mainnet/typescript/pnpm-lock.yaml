@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@arkade-os/sdk':
-        specifier: ^0.4.40
-        version: 0.4.40
+        specifier: ^0.4.41
+        version: 0.4.41
       '@noble/hashes':
         specifier: ^2.2.0
         version: 2.2.0
@@ -20,8 +20,8 @@ importers:
 
 packages:
 
-  '@arkade-os/sdk@0.4.40':
-    resolution: {integrity: sha512-d92VY9KVxSYOigBYSZex9znI8jncN+/1NfnKlyCSkbrXUkmf2izwr/edvZIpQz07VrUEY97VLzxPwC20UVCjRg==}
+  '@arkade-os/sdk@0.4.41':
+    resolution: {integrity: sha512-45dmsZYg5BbAKvbeDHjUTOqM06fcIgdd4UxaDKHaows4y1uriLDD/Ae2RH9dAq8LbHM5TKujXQ8g456xRHnoaA==}
     engines: {node: '>=22.12.0 <25'}
     peerDependencies:
       '@react-native-async-storage/async-storage': '>=1.0.0'
@@ -125,6 +125,9 @@ packages:
   '@scure/btc-signer@2.0.1':
     resolution: {integrity: sha512-vk5a/16BbSFZkhh1JIJ0+4H9nceZVo5WzKvJGGWiPp3sQOExeW+L53z3dI6u0adTPoE8ZbL+XEb6hEGzVZSvvQ==}
 
+  '@scure/btc-signer@2.2.0':
+    resolution: {integrity: sha512-ZXZ08sZqSZKEcOuEQnxTF66ouHtl6+UA6U/QfQM06K9WiOlEkXF4LviZCaSgkdiFh9cyMt9+xdup7JtEv3p0fw==}
+
   bip68@1.0.4:
     resolution: {integrity: sha512-O1htyufFTYy3EO0JkHg2CLykdXEtV2ssqw47Gq9A0WByp662xpJnMEB9m43LZjsSDjIAOozWRExlFQk2hlV1XQ==}
     engines: {node: '>=4.5.0'}
@@ -139,6 +142,10 @@ packages:
 
   micro-packed@0.8.0:
     resolution: {integrity: sha512-AKb8znIvg9sooythbXzyFeChEY0SkW0C6iXECpy/ls0e5BtwXO45J9wD9SLzBztnS4XmF/5kwZknsq+jyynd/A==}
+    engines: {node: '>= 20.19.0'}
+
+  micro-packed@0.9.0:
+    resolution: {integrity: sha512-gFdaWTxEXOwtSOcpxulO4AuXVtp3HWIRmB8eq8+3m1Zku0ubgva0UGpi03YhcvsTJasHngG9gTIUK5kHNKdesg==}
     engines: {node: '>= 20.19.0'}
 
   uint8array-tools@0.0.8:
@@ -170,7 +177,7 @@ packages:
 
 snapshots:
 
-  '@arkade-os/sdk@0.4.40':
+  '@arkade-os/sdk@0.4.41':
     dependencies:
       '@bitcoinerlab/descriptors-scure': 3.1.7
       '@marcbachmann/cel-js': 7.3.1
@@ -189,27 +196,27 @@ snapshots:
       - ecpair
       - utf-8-validate
 
-  '@bitcoinerlab/descriptors-core@3.1.7(@noble/curves@2.0.1)(@noble/hashes@2.2.0)(@scure/base@2.2.0)(@scure/bip32@2.2.0)(@scure/btc-signer@2.0.1)':
+  '@bitcoinerlab/descriptors-core@3.1.7(@noble/curves@2.2.0)(@noble/hashes@2.2.0)(@scure/base@2.2.0)(@scure/bip32@2.2.0)(@scure/btc-signer@2.2.0)':
     dependencies:
       '@bitcoinerlab/miniscript': 2.0.0
       lodash.memoize: 4.1.2
       uint8array-tools: 0.0.9
       varuint-bitcoin: 2.0.0
     optionalDependencies:
-      '@noble/curves': 2.0.1
+      '@noble/curves': 2.2.0
       '@noble/hashes': 2.2.0
       '@scure/base': 2.2.0
       '@scure/bip32': 2.2.0
-      '@scure/btc-signer': 2.0.1
+      '@scure/btc-signer': 2.2.0
 
   '@bitcoinerlab/descriptors-scure@3.1.7':
     dependencies:
-      '@bitcoinerlab/descriptors-core': 3.1.7(@noble/curves@2.0.1)(@noble/hashes@2.2.0)(@scure/base@2.2.0)(@scure/bip32@2.2.0)(@scure/btc-signer@2.0.1)
-      '@noble/curves': 2.0.1
+      '@bitcoinerlab/descriptors-core': 3.1.7(@noble/curves@2.2.0)(@noble/hashes@2.2.0)(@scure/base@2.2.0)(@scure/bip32@2.2.0)(@scure/btc-signer@2.2.0)
+      '@noble/curves': 2.2.0
       '@noble/hashes': 2.2.0
       '@scure/base': 2.2.0
       '@scure/bip32': 2.2.0
-      '@scure/btc-signer': 2.0.1
+      '@scure/btc-signer': 2.2.0
     transitivePeerDependencies:
       - bip32
       - bitcoinjs-lib
@@ -257,6 +264,13 @@ snapshots:
       '@scure/base': 2.0.0
       micro-packed: 0.8.0
 
+  '@scure/btc-signer@2.2.0':
+    dependencies:
+      '@noble/curves': 2.2.0
+      '@noble/hashes': 2.2.0
+      '@scure/base': 2.2.0
+      micro-packed: 0.9.0
+
   bip68@1.0.4: {}
 
   isomorphic-ws@5.0.0(ws@8.21.0):
@@ -268,6 +282,10 @@ snapshots:
   micro-packed@0.8.0:
     dependencies:
       '@scure/base': 2.0.0
+
+  micro-packed@0.9.0:
+    dependencies:
+      '@scure/base': 2.2.0
 
   uint8array-tools@0.0.8: {}
 
