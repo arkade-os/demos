@@ -5,7 +5,7 @@
     "dev": "node index.ts"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.4.40",
+    "@arkade-os/sdk": "^0.4.41",
     "better-sqlite3": "^12.11.1",
     "eventsource": "^4.1.0"
   },
