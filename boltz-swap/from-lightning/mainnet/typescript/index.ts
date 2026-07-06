@@ -14,6 +14,8 @@ import {
 import Database from "better-sqlite3";
 import { EventSource } from "eventsource";
 
+const LN_AMOUNT = 500 as const;
+
 const SEED_PHRASE =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const DELEGATE_URL = "https://delegate.arkade.money" as const;
@@ -91,7 +93,7 @@ if (!swaps.swapManager) {
 
 /** 6. Create Lightning > Arkade swap */
 const result = await swaps.createLightningInvoice({
-  amount: 500,
+  amount: LN_AMOUNT,
   description: "Hello World!",
 });
 

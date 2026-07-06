@@ -14,6 +14,8 @@ import {
 import Database from "better-sqlite3";
 import { EventSource } from "eventsource";
 
+const ARKADE_AMOUNT = 10_000 as const;
+
 const SEED_PHRASE =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const DELEGATE_URL = "https://delegate.arkade.money" as const;
@@ -96,7 +98,7 @@ const result = await swaps.btcToArk({
    * This will automatically adjust the amount to be sent on mainnet
    * If you want to instead specify a particular amount to send on mainnet, use senderLockAmount
    */
-  receiverLockAmount: 10_000,
+  receiverLockAmount: ARKADE_AMOUNT,
 });
 
 console.log("Created mainnet > Arkade swap:");
