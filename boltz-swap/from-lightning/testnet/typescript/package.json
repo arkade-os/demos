@@ -5,8 +5,8 @@
     "dev": "node index.ts"
   },
   "dependencies": {
-    "@arkade-os/boltz-swap": "^0.3.45",
-    "@arkade-os/sdk": "^0.4.40",
+    "@arkade-os/boltz-swap": "^0.3.46",
+    "@arkade-os/sdk": "^0.4.41",
     "better-sqlite3": "^12.11.1",
     "eventsource": "^4.1.0"
   },
