@@ -81,7 +81,7 @@ const required =
   wallet.dustAmount * 2n + (assets.length ? wallet.dustAmount : 0n);
 const subdustAmount = Number(wallet.dustAmount) / 2;
 
-if (available <= required) {
+if (available < required) {
   throw new Error(`Wallet balance must exceed ${required}`, {
     cause: await wallet.getAddress(),
   });
