@@ -94,23 +94,23 @@ if (!swaps.swapManager) {
   throw new Error("Swap manager not auto-configured");
 }
 
-/** 6. Create mainnet > Arkade swap */
+/** 6. Create onchain > Arkade swap */
 const result = await swaps.btcToArk({
   /**
    * Amount to be received on Arkade
-   * This will automatically adjust the amount to be sent on mainnet
-   * If you want to instead specify a particular amount to send on mainnet, use senderLockAmount
+   * This will automatically adjust the amount to be sent onchain
+   * If you want to instead specify a particular amount to send onchain, use senderLockAmount
    */
   receiverLockAmount: ARKADE_AMOUNT,
 });
 
-console.log("Created mainnet > Arkade swap:");
+console.log("Created onchain > Arkade swap:");
 console.log({
-  /** The amount to be paid over mainnet */
+  /** The amount to be paid onchain */
   amountToPay: result.amountToPay,
   /** The amount that will be delivered on Arkade */
   deliveredAmount: result.pendingSwap.amount,
-  /** Where the funds will be locked on mainnet */
+  /** Where the funds will be locked onchain */
   lockupAddress: result.btcAddress,
   /** Where the funds will be claimed from on Arkade */
   claimAddress: result.pendingSwap.response.claimDetails.lockupAddress,
@@ -132,7 +132,7 @@ const stopNotifyingSwaps = await swaps.swapManager?.onSwapUpdate(
     if (swap.type !== "chain" && swap.id === result.pendingSwap.id) {
       console.warn("Unexpected swap update:", swap);
     }
-    console.log("Updated mainnet > Arkade swap:", {
+    console.log("Updated onchain > Arkade swap:", {
       status: swap.status,
     });
   },
