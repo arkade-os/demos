@@ -1,9 +1,5 @@
-/** WIP: need some means of monitoring for delegated settlement */
-
 import {
-  ArkAddress,
   MnemonicIdentity,
-  networks,
   RestArkProvider,
   RestDelegateProvider,
   Wallet,
@@ -81,8 +77,10 @@ const wallet = await Wallet.create({
 /** 5. Fetch delegable outputs */
 const contractManager = await wallet.getContractManager();
 const contractsWithOutputs = await contractManager.getContractsWithVtxos({
+  /** Filter only for current delegated script */
+  script: hex.encode(wallet.arkAddress.pkScript),
   /** Filter only for scripts with delegate path */
-  type: ["delegate"],
+  type: "delegate",
 });
 /** Filter out spent or unrolled outputs */
 const delegableOutputs = contractsWithOutputs
@@ -108,8 +106,8 @@ if (!delegateManager) {
 
 const delegationResult = await delegateManager.delegate(
   delegableOutputs,
-  /** This should default to the current delegated address */
-  await wallet.getAddress(),
+  /** This should equal the current delegated address */
+  wallet.arkAddress.encode(),
   /** Process delegation immediately */
   new Date(),
 );
@@ -123,15 +121,10 @@ if (delegationResult.failed.length !== 0) {
 // Temporary cast for type mismatch
 const delegatedOutpoints = (
   delegationResult.delegated as unknown as ContractVtxo[]
-).map(({ txid, vout, script }) => ({
+).map(({ txid, vout }) => ({
   txid,
   vout,
-  address: new ArkAddress(
-    wallet.arkServerPublicKey,
-    hex.decode(script).slice(2),
-    networks.mutinynet.hrp,
-  ).encode(),
-})) as Array<Outpoint & { address: string }>;
+})) as Outpoint[];
 
 console.log(
   `Delegated renewal of ${delegatedOutpoints.length} outputs:`,
