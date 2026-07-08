@@ -75,29 +75,28 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-- [-] notify incoming funds
-  - [-] asset (filtered by ID)
-    - [-] mainnet
-      - [x] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
-    - [-] testnet
-      - [x] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
-  - [-] bitcoin (including boarding inputs)
-    - [-] mainnet
-      - [x] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
-    - [-] testnet
-      - [x] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
+- [-] notify incoming asset (filtered by ID)
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] notify incoming bitcoin (including boarding inputs)
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
 - [-] fetch spendable outputs
   - [-] mainnet
     - [x] typescript
