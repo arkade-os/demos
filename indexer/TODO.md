@@ -9,40 +9,39 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-- [-] outputs
-  - [-] by address
-    - [ ] mainnet
-      - [ ] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
-    - [-] testnet
-      - [x] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
-  - [-] by outpoint
-    - [ ] mainnet
-      - [ ] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
-    - [-] testnet
-      - [x] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
-  - [-] by script
-    - [ ] mainnet
-      - [ ] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
-    - [-] testnet
-      - [x] typescript
-      - [ ] go
-      - [ ] rust
-      - [ ] .net
+- [-] outputs by address
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] outputs by outpoint
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] outputs by script
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
 - [-] get virtual transactions
   - [-] mainnet
     - [x] typescript
@@ -54,7 +53,7 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-- [-] get virtual output transaction chain
+- [-] get virtual transaction output chain
   - [-] mainnet
     - [x] typescript
     - [ ] go
