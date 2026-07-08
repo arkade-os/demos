@@ -1,0 +1,67 @@
+- [ ] boarding (manual)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] collaborative exit
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] delegated exit
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] delegated renewal
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] create + recover subdust outputs (via vtxo manager)
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] create + settle preconfirmed outputs (via vtxo manager)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+    
