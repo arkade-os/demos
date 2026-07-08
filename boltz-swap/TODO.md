@@ -1,4 +1,4 @@
-- [-] lightning > arkade
+- [-] lightning > arkade (happy path)
   - [-] mainnet
     - [x] typescript
     - [ ] go
@@ -9,7 +9,7 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-- [ ] arkade > lightning
+- [ ] arkade > lightning (happy path)
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
@@ -20,7 +20,18 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-- [-] mainnet > arkade
+- [ ] arkade > lightning (fail, collab refund)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [-] onchain > arkade (happy path)
   - [-] mainnet
     - [x] typescript
     - [ ] go
@@ -31,7 +42,18 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-- [ ] arkade > mainnet
+- [-] onchain > arkade (fail, collab refund)
+  - [-] mainnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+- [ ] arkade > onchain (happy path)
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
@@ -42,7 +64,7 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-- [ ] usdt0 > arkade
+- [ ] usdt0 > arkade (happy path)
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
@@ -53,7 +75,7 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-- [ ] arkade > usdt0
+- [ ] arkade > usdt0 (happy path)
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
@@ -64,3 +86,5 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
+
+TODO: edge cases, underbid, overbid, etc
