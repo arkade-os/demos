@@ -9,3 +9,14 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
+- [ ] derive from script
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [ ] testnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
