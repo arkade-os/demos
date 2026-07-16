@@ -97,6 +97,20 @@ if (!delegableOutputs.length) {
   });
 }
 
+const delegableTotal = delegableOutputs.reduce((total, output) => {
+  return BigInt(output.value) + total;
+}, 0n);
+
+if (delegableTotal < wallet.dustAmount) {
+  throw new Error("Delegable total is under dust amount:", {
+    cause: {
+      address: await wallet.getAddress(),
+      total: delegableTotal,
+      need: wallet.dustAmount - delegableTotal,
+    },
+  });
+}
+
 /** 5. Sweep previously settled outputs (if necessary)
  *
  * Delegation requests will be rejected if any of the inputs are invalid,
