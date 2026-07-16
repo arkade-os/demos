@@ -12,11 +12,15 @@ import {
 import Database from "better-sqlite3";
 import { EventSource } from "eventsource";
 
+/** When to process the delegation request */
+const DELEGATE_IN_SECONDS = 60 as const;
+
 const SEED_PHRASE =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
+const ONE_DAY_IN_SECONDS = 259_200 as const;
 
 /** 1. Polyfill EventSource
  * EventSource is used internally by the SDK for settlement events (SSE).
@@ -72,40 +76,10 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 4. Check balances */
-const { settled, available, recoverable, assets } = await wallet.getBalance();
-
-if (available + recoverable < wallet.dustAmount) {
-  throw new Error("No delegable outputs", {
-    cause: await wallet.getAddress(),
-  });
-}
-
-if (available + recoverable === settled) {
-  throw new Error("All outputs in this wallet are already settled", {
-    cause: await wallet.getAddress(),
-  });
-}
-
-/** 5. Sweep previously settled outputs if they exist
- * This is necessary as the operator may refuse a batch intent if it includes recently settled outputs
- */
-if (settled > 0) {
-  console.log("Sweeping previously settled outputs to self...");
-  const sweepTxid = await wallet.send({
-    address: await wallet.getAddress(),
-    amount: available,
-    assets,
-  });
-  console.log(`Swept: ${EXPLORER_URL}/tx/${sweepTxid}`);
-  // Wait 500ms for indexer to update
-  await new Promise((resolve) => setTimeout(resolve, 500));
-}
-
-/** 6. Fetch delegable outputs */
+/** 4. Fetch delegable outputs */
 console.log("Fetching delegable outputs...");
 const contractManager = await wallet.getContractManager();
-const delegableOutputs = await contractManager
+let delegableOutputs = await contractManager
   .getContractsWithVtxos({
     /** Filter only for scripts with delegate path */
     type: "delegate",
@@ -113,20 +87,69 @@ const delegableOutputs = await contractManager
   .then((contractsWithOutputs) =>
     contractsWithOutputs
       .flatMap(({ vtxos }) => vtxos)
-      /** Filter out spent, unrolled, or settled outputs */
-      .filter(
-        (output) =>
-          !(output.isSpent || output.isUnrolled || output.settledBy?.length),
-      ),
+      /** Filter out spent or unrolled outputs */
+      .filter((output) => !(output.isSpent || output.isUnrolled)),
   );
 
-if (!delegableOutputs) {
-  throw new Error("No delegable outputs", {
+if (!delegableOutputs.length) {
+  throw new Error("No delegable outputs:", {
     cause: await wallet.getAddress(),
   });
 }
 
-/** 7. Submit delegation request */
+/** 5. Sweep previously settled outputs (if necessary)
+ *
+ * Delegation requests will be rejected if any of the inputs are invalid,
+ * which includes recently settled virtual outputs.
+ *
+ * Spending them replaces them with a single preconfirmed output.
+ *
+ */
+const settledOutputs = delegableOutputs.filter(
+  (output) => output.settledBy?.length,
+);
+
+const earliestCreatedAt = settledOutputs.reduce((earliest, output) => {
+  return output.createdAt.getTime() / 1000 < earliest
+    ? output.createdAt.getTime() / 1000
+    : earliest;
+}, Infinity);
+
+if (
+  settledOutputs.length === delegableOutputs.length &&
+  Math.floor(Date.now() / 1000) - earliestCreatedAt < ONE_DAY_IN_SECONDS
+) {
+  throw new Error(
+    "All outputs in this wallet are already settled and less than 24 hours old",
+    {
+      cause: await wallet.getAddress(),
+    },
+  );
+}
+
+if (settledOutputs.length > 0) {
+  console.log("Sweeping previously settled outputs to self...");
+  const sweepTxid = await wallet.sendSelectedVtxosToSelf(settledOutputs);
+  console.log(`Swept: ${EXPLORER_URL}/tx/${sweepTxid}`);
+  /** Wait 500ms for indexer to update */
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  /** Refresh delegable outputs */
+  delegableOutputs = await contractManager
+    .getContractsWithVtxos({
+      type: "delegate",
+    })
+    .then((contractsWithOutputs) =>
+      contractsWithOutputs
+        .flatMap(({ vtxos }) => vtxos)
+        /** Filter out spent, unrolled, or settled outputs */
+        .filter(
+          (output) =>
+            !(output.isSpent || output.isUnrolled || output.settledBy?.length),
+        ),
+    );
+}
+
+/** 6. Submit delegation request */
 const delegateManager = await wallet.getDelegateManager();
 
 if (!delegateManager) {
@@ -142,8 +165,8 @@ const { failed, delegated } = await delegateManager.delegate(
   delegableOutputs,
   /** Where to send them */
   await wallet.getAddress(),
-  /** When to process the request (immediately) */
-  new Date(),
+  /** When to process the request */
+  new Date(Date.now() + DELEGATE_IN_SECONDS * 1000),
 );
 
 if (delegated.length) {
