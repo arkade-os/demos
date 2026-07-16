@@ -98,10 +98,9 @@ if (settled > 0) {
     assets,
   });
   console.log(`Swept: ${EXPLORER_URL}/tx/${sweepTxid}`);
+  // Wait 500ms for indexer to update
+  await new Promise((resolve) => setTimeout(resolve, 500));
 }
-
-// Wait 500ms for indexer to update
-await new Promise((resolve) => setTimeout(resolve, 500));
 
 /** 6. Fetch delegable outputs */
 console.log("Fetching delegable outputs...");
