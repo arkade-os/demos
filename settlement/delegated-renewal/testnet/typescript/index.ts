@@ -97,20 +97,6 @@ if (!delegableOutputs.length) {
   });
 }
 
-const delegableTotal = delegableOutputs.reduce((total, output) => {
-  return BigInt(output.value) + total;
-}, 0n);
-
-if (delegableTotal < wallet.dustAmount) {
-  throw new Error("Delegable total is under dust amount:", {
-    cause: {
-      address: await wallet.getAddress(),
-      total: delegableTotal,
-      need: wallet.dustAmount - delegableTotal,
-    },
-  });
-}
-
 /** 5. Sweep previously settled outputs (if necessary)
  *
  * Delegation requests will be rejected if any of the inputs are invalid,
@@ -123,11 +109,13 @@ const settledOutputs = delegableOutputs.filter(
   (output) => output.settledBy?.length,
 );
 
-const earliestCreatedAt = settledOutputs.reduce((earliest, output) => {
-  return output.createdAt.getTime() / 1000 < earliest
-    ? output.createdAt.getTime() / 1000
-    : earliest;
-}, Infinity);
+const earliestCreatedAt = settledOutputs.reduce(
+  (earliest, output) =>
+    output.createdAt.getTime() / 1000 < earliest
+      ? output.createdAt.getTime() / 1000
+      : earliest,
+  Infinity,
+);
 
 if (
   settledOutputs.length === delegableOutputs.length &&
@@ -163,13 +151,34 @@ if (settledOutputs.length > 0) {
     );
 }
 
-/** 6. Submit delegation request */
+/** 6. Check delegable total is at least the dust amount + delegate fee */
 const delegateManager = await wallet.getDelegateManager();
 
 if (!delegateManager) {
   throw new Error("Could not initalize delegate manager");
 }
 
+const delegableTotal = delegableOutputs.reduce(
+  (total, output) => BigInt(output.value) + total,
+  0n,
+);
+
+const { fee: _fee } = await delegateManager.getDelegateInfo();
+const fee = BigInt(_fee);
+
+if (delegableTotal < wallet.dustAmount + fee) {
+  throw new Error("Delegable total is under dust amount:", {
+    cause: {
+      address: await wallet.getAddress(),
+      total: delegableTotal,
+      dust: wallet.dustAmount,
+      fee: fee,
+      need: wallet.dustAmount + fee - delegableTotal,
+    },
+  });
+}
+
+/** 7. Submit delegation request */
 console.log(
   `Requesting delegation of ${delegableOutputs.length} output(s):`,
   delegableOutputs.map(({ txid, vout }) => `${txid}:${vout}`),
