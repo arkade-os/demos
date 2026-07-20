@@ -9,19 +9,19 @@ importers:
   .:
     dependencies:
       '@arkade-os/sdk':
-        specifier: ^0.4.41
-        version: 0.4.41
+        specifier: ^0.4.47
+        version: 0.4.47
       '@scure/base':
         specifier: ^2.2.0
         version: 2.2.0
       nostr-tools:
-        specifier: ^2.23.9
-        version: 2.23.9
+        specifier: ^2.23.12
+        version: 2.23.12
 
 packages:
 
-  '@arkade-os/sdk@0.4.41':
-    resolution: {integrity: sha512-45dmsZYg5BbAKvbeDHjUTOqM06fcIgdd4UxaDKHaows4y1uriLDD/Ae2RH9dAq8LbHM5TKujXQ8g456xRHnoaA==}
+  '@arkade-os/sdk@0.4.47':
+    resolution: {integrity: sha512-uaDi1AYt9BQBnG5zCAXT+4FKfzXsJcywdwBljY++Vho2rSLl4qexZpk/FAmpYDtkfJ0XoNs7pRwr4lQp13XBWA==}
     engines: {node: '>=22.12.0 <25'}
     peerDependencies:
       '@react-native-async-storage/async-storage': '>=1.0.0'
@@ -86,8 +86,8 @@ packages:
   '@bitcoinerlab/miniscript@2.0.0':
     resolution: {integrity: sha512-P8yyubPf6lphmIZfyD/ZbhT/umJX7zH1mKjGql7z0Qt+xuffnz2AueQqq2/01VE2rTIq80VM0oRFdJClGBYx/g==}
 
-  '@marcbachmann/cel-js@7.3.1':
-    resolution: {integrity: sha512-P6o26TvjStT8V8+8EF+yq9Pp7ZFV00bpiUMbssr76XbIZGxaB+NNWeBp6WNxOrR9gp0JPzvJueCKHpOs5LE9PQ==}
+  '@marcbachmann/cel-js@8.0.0':
+    resolution: {integrity: sha512-oaTrAziGr3zDLFiMt/yLU3nZuRMawyWQB5X1a0I7s9eGy3JYzX9l8ZXXHyMd64nzbeVFZTewuUShwsZQdK6UCA==}
     engines: {node: '>=20.19.0'}
     hasBin: true
 
@@ -155,8 +155,8 @@ packages:
     resolution: {integrity: sha512-gFdaWTxEXOwtSOcpxulO4AuXVtp3HWIRmB8eq8+3m1Zku0ubgva0UGpi03YhcvsTJasHngG9gTIUK5kHNKdesg==}
     engines: {node: '>= 20.19.0'}
 
-  nostr-tools@2.23.9:
-    resolution: {integrity: sha512-PBN3TpGh+EszlTZWpQdvcqEMqhcKcY1vTw0Xkkccg+TyP7y/icu9/iXJw72aFZ/ETm35ehU0hneGTXLaTSkImw==}
+  nostr-tools@2.23.12:
+    resolution: {integrity: sha512-dLE9r0b4pCmrOKLUPD0KhUj9IXeh6RwiYoonEWeBh2AaDmlczUjJqJC8pQfggXzKUZ7+uZvhcrKkfwuZk0/e1g==}
     peerDependencies:
       typescript: '>=5.0.0'
     peerDependenciesMeta:
@@ -181,8 +181,8 @@ packages:
     resolution: {integrity: sha512-pBjfFqb9j2FBz7NPbnd8r2lOYanEw8ACzfKxOtHCgEGqre5QiTax5XHLVgbsiOvST0vmsHAiMtkJPvsZm77PIQ==}
     engines: {node: '>=10'}
 
-  ws@8.21.0:
-    resolution: {integrity: sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==}
+  ws@8.21.1:
+    resolution: {integrity: sha512-+0NTnW77fFN/DjQi6k/Sq/Yvk4Sgajw7urW8V+asjXnRgDs9gyGkdb7EzgfhA4goXsRIZKE28fzIXBHEzhuiWw==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -195,10 +195,10 @@ packages:
 
 snapshots:
 
-  '@arkade-os/sdk@0.4.41':
+  '@arkade-os/sdk@0.4.47':
     dependencies:
       '@bitcoinerlab/descriptors-scure': 3.1.7
-      '@marcbachmann/cel-js': 7.3.1
+      '@marcbachmann/cel-js': 8.0.0
       '@noble/curves': 2.0.1
       '@noble/secp256k1': 3.0.0
       '@scure/base': 2.0.0
@@ -244,7 +244,7 @@ snapshots:
     dependencies:
       bip68: 1.0.4
 
-  '@marcbachmann/cel-js@7.3.1': {}
+  '@marcbachmann/cel-js@8.0.0': {}
 
   '@noble/ciphers@2.1.1': {}
 
@@ -299,9 +299,9 @@ snapshots:
 
   bip68@1.0.4: {}
 
-  isomorphic-ws@5.0.0(ws@8.21.0):
+  isomorphic-ws@5.0.0(ws@8.21.1):
     dependencies:
-      ws: 8.21.0
+      ws: 8.21.1
 
   lodash.memoize@4.1.2: {}
 
@@ -313,7 +313,7 @@ snapshots:
     dependencies:
       '@scure/base': 2.2.0
 
-  nostr-tools@2.23.9:
+  nostr-tools@2.23.12:
     dependencies:
       '@noble/ciphers': 2.1.1
       '@noble/curves': 2.0.1
@@ -335,10 +335,10 @@ snapshots:
 
   ws-electrumx-client@1.0.5:
     dependencies:
-      isomorphic-ws: 5.0.0(ws@8.21.0)
-      ws: 8.21.0
+      isomorphic-ws: 5.0.0(ws@8.21.1)
+      ws: 8.21.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  ws@8.21.0: {}
+  ws@8.21.1: {}

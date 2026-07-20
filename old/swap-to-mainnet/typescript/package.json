@@ -6,7 +6,7 @@
     "dev": "node index.ts"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.4.39",
+    "@arkade-os/sdk": "^0.4.47",
     "@bitcoinerlab/descriptors-scure": "^3.1.7",
     "@noble/hashes": "^2.2.0",
     "@scure/base": "^2.2.0",

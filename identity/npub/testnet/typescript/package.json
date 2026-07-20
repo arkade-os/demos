@@ -5,8 +5,8 @@
     "dev": "node index.ts"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.4.41",
+    "@arkade-os/sdk": "^0.4.47",
     "@scure/base": "^2.2.0",
-    "nostr-tools": "^2.23.9"
+    "nostr-tools": "^2.23.12"
   }
 }
