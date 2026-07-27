@@ -18,9 +18,32 @@ const FAUCET_CMD =
     process.env.FAUCET_CMD ??
     "docker exec -t arkd ark send --to {addr} --amount {amount} --password secret";
 
+/** Top up the arkd CLI wallet from a credit note (fresh stacks start empty). */
+function fundArkCli(amount: number): void {
+    const note = execSync(`docker exec -t arkd arkd note --amount ${amount}`, {
+        stdio: "pipe",
+    })
+        .toString()
+        .trim()
+        .split(/\s+/)
+        .at(-1);
+    if (!note) throw new Error("arkd note produced no output");
+    execSync(`docker exec -t arkd ark redeem-notes -n ${note} --password secret`, {
+        stdio: "pipe",
+    });
+}
+
 export function faucetOffchain(address: string, amount: number): void {
     const cmd = FAUCET_CMD.replaceAll("{addr}", address).replaceAll("{amount}", String(amount));
-    execSync(cmd, { stdio: "pipe" });
+    try {
+        execSync(cmd, { stdio: "pipe" });
+    } catch (e) {
+        if (process.env.FAUCET_CMD) throw e; // custom command — don't second-guess it
+        // Default path: the CLI wallet is likely unfunded — mint + redeem a
+        // credit note (the ts-sdk e2e convention), then retry once.
+        fundArkCli(Math.max(amount * 2, 100_000));
+        execSync(cmd, { stdio: "pipe" });
+    }
 }
 
 /**
