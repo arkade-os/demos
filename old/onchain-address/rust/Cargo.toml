@@ -8,5 +8,5 @@ anyhow = "1"
 bip39 = "2.0"
 bitcoin = { version = "0.32.7", features = ["rand"] }
 hex = "0.4"
-ark-client = { git = "https://github.com/arkade-os/rust-sdk" }
-ark-bdk-wallet = { git = "https://github.com/arkade-os/rust-sdk" }
+ark-client = { git = "https://github.com/arkade-os/rust-sdk", rev = "421259dfd026af028783c2685659eb16481e1df0" }
+ark-bdk-wallet = { git = "https://github.com/arkade-os/rust-sdk", rev = "421259dfd026af028783c2685659eb16481e1df0" }

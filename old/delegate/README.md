@@ -16,3 +16,7 @@ Related: [arkade-address](https://github.com/arkade-os/demos/tree/master/old/ark
 ### TypeScript
 
 `pnpm install && pnpm dev`
+
+### Rust
+
+`cargo run`
