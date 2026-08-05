@@ -1,0 +1,379 @@
+{
+  "contractName": "PaymentHold",
+  "constructorInputs": [
+    {
+      "name": "feeRateBasisPoints",
+      "type": "int"
+    },
+    {
+      "name": "merchantScript",
+      "type": "bytes"
+    },
+    {
+      "name": "processorScript",
+      "type": "bytes"
+    },
+    {
+      "name": "customerScript",
+      "type": "bytes"
+    },
+    {
+      "name": "releaseBlockHeight",
+      "type": "int"
+    },
+    {
+      "name": "merchantPubkey",
+      "type": "pubkey"
+    },
+    {
+      "name": "exit",
+      "type": "int"
+    }
+  ],
+  "functions": [
+    {
+      "name": "capture",
+      "arkade": {
+        "inputs": [
+          {
+            "name": "captureAmount",
+            "type": "int"
+          },
+          {
+            "name": "merchantSig",
+            "type": "signature"
+          }
+        ],
+        "asm": [
+          "<merchantPubkey>",
+          "<merchantSig>",
+          "OP_CHECKSIG",
+          "OP_VERIFY",
+          "OP_PUSHCURRENTINPUTINDEX",
+          "OP_INSPECTINPUTVALUE",
+          "<captureAmount>",
+          "330",
+          "OP_GREATERTHAN",
+          "OP_VERIFY",
+          "<captureAmount>",
+          "<held>",
+          "OP_LESSTHANOREQUAL",
+          "OP_VERIFY",
+          "<captureAmount>",
+          "2100000000000",
+          "OP_LESSTHANOREQUAL",
+          "OP_VERIFY",
+          "<feeRateBasisPoints>",
+          "0",
+          "OP_GREATERTHANOREQUAL",
+          "OP_VERIFY",
+          "<feeRateBasisPoints>",
+          "10000",
+          "OP_LESSTHANOREQUAL",
+          "OP_VERIFY",
+          "<captureAmount>",
+          "<feeRateBasisPoints>",
+          "OP_MUL",
+          "10000",
+          "OP_DIV",
+          "<captureAmount>",
+          "<processorFee>",
+          "OP_SUB",
+          "<merchantAmount>",
+          "330",
+          "OP_GREATERTHAN",
+          "OP_VERIFY",
+          "<held>",
+          "<captureAmount>",
+          "OP_SUB",
+          "<processorFee>",
+          "330",
+          "OP_GREATERTHAN",
+          "OP_IF",
+          "<change>",
+          "330",
+          "OP_GREATERTHAN",
+          "OP_IF",
+          "OP_INSPECTNUMOUTPUTS",
+          "3",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTVALUE",
+          "<merchantAmount>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<merchantScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "1",
+          "OP_INSPECTOUTPUTVALUE",
+          "<processorFee>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "1",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<processorScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "2",
+          "OP_INSPECTOUTPUTVALUE",
+          "<change>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "2",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<customerScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "OP_ELSE",
+          "OP_INSPECTNUMOUTPUTS",
+          "2",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "<merchantAmount>",
+          "<change>",
+          "OP_ADD",
+          "0",
+          "OP_INSPECTOUTPUTVALUE",
+          "<merchantWithChange>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<merchantScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "1",
+          "OP_INSPECTOUTPUTVALUE",
+          "<processorFee>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "1",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<processorScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "OP_ENDIF",
+          "OP_ELSE",
+          "<change>",
+          "330",
+          "OP_GREATERTHAN",
+          "OP_IF",
+          "OP_INSPECTNUMOUTPUTS",
+          "2",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "<merchantAmount>",
+          "<processorFee>",
+          "OP_ADD",
+          "0",
+          "OP_INSPECTOUTPUTVALUE",
+          "<merchantWithFee>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<merchantScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "1",
+          "OP_INSPECTOUTPUTVALUE",
+          "<change>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "1",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<customerScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "OP_ELSE",
+          "OP_INSPECTNUMOUTPUTS",
+          "1",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTVALUE",
+          "<held>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<merchantScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "OP_ENDIF",
+          "OP_ENDIF",
+          "OP_1"
+        ]
+      },
+      "leaves": [
+        {
+          "name": "capture",
+          "witness": [
+            {
+              "name": "serverSig",
+              "type": "signature",
+              "encoding": "schnorr-64",
+              "injected": true
+            },
+            {
+              "name": "emulatorSig",
+              "type": "signature",
+              "encoding": "schnorr-64",
+              "injected": true
+            }
+          ],
+          "asm": [
+            "<SERVER_KEY>",
+            "OP_CHECKSIGVERIFY",
+            "<EMULATOR_KEY:capture>",
+            "OP_CHECKSIG"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "void",
+      "arkade": {
+        "inputs": [
+          {
+            "name": "merchantSig",
+            "type": "signature"
+          }
+        ],
+        "asm": [
+          "<merchantPubkey>",
+          "<merchantSig>",
+          "OP_CHECKSIG",
+          "OP_VERIFY",
+          "OP_PUSHCURRENTINPUTINDEX",
+          "OP_INSPECTINPUTVALUE",
+          "OP_INSPECTNUMOUTPUTS",
+          "1",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTVALUE",
+          "<held>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<customerScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "OP_1"
+        ]
+      },
+      "leaves": [
+        {
+          "name": "void",
+          "witness": [
+            {
+              "name": "serverSig",
+              "type": "signature",
+              "encoding": "schnorr-64",
+              "injected": true
+            },
+            {
+              "name": "emulatorSig",
+              "type": "signature",
+              "encoding": "schnorr-64",
+              "injected": true
+            }
+          ],
+          "asm": [
+            "<SERVER_KEY>",
+            "OP_CHECKSIGVERIFY",
+            "<EMULATOR_KEY:void>",
+            "OP_CHECKSIG"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "refund",
+      "arkade": {
+        "inputs": [],
+        "asm": [
+          "<releaseBlockHeight>",
+          "OP_CHECKLOCKTIMEVERIFY",
+          "OP_DROP",
+          "OP_PUSHCURRENTINPUTINDEX",
+          "OP_INSPECTINPUTVALUE",
+          "OP_INSPECTNUMOUTPUTS",
+          "1",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTVALUE",
+          "<held>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "0",
+          "OP_INSPECTOUTPUTSCRIPTPUBKEY",
+          "<customerScript>",
+          "OP_EQUAL",
+          "OP_VERIFY",
+          "OP_1"
+        ]
+      },
+      "leaves": [
+        {
+          "name": "refund",
+          "witness": [
+            {
+              "name": "serverSig",
+              "type": "signature",
+              "encoding": "schnorr-64",
+              "injected": true
+            },
+            {
+              "name": "emulatorSig",
+              "type": "signature",
+              "encoding": "schnorr-64",
+              "injected": true
+            }
+          ],
+          "asm": [
+            "<SERVER_KEY>",
+            "OP_CHECKSIGVERIFY",
+            "<EMULATOR_KEY:refund>",
+            "OP_CHECKSIG"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unilateral",
+      "leaves": [
+        {
+          "name": "unilateral",
+          "witness": [
+            {
+              "name": "merchantSig",
+              "type": "signature",
+              "encoding": "schnorr-64"
+            }
+          ],
+          "asm": [
+            "<exit>",
+            "OP_CHECKSEQUENCEVERIFY",
+            "OP_DROP",
+            "<merchantPubkey>",
+            "OP_CHECKSIG"
+          ]
+        }
+      ]
+    }
+  ],
+  "source": "\ncontract PaymentHold(\n  int feeRateBasisPoints,\n\n  bytes merchantScript,\n  bytes processorScript,\n  bytes customerScript,\n\n  int releaseBlockHeight,\n\n  pubkey merchantPubkey,\n\n  int exit\n) {\n\n  function capture(int captureAmount, signature merchantSig) {\n    require(checkSig(merchantSig, merchantPubkey), \"invalid merchant signature\");\n\n    let held = tx.input.current.value;\n    require(captureAmount > 330, \"capture below dust\");\n    require(captureAmount <= held, \"capture exceeds hold\");\n    require(captureAmount <= 2100000000000, \"capture too large\");\n    require(feeRateBasisPoints >= 0, \"negative fee rate\");\n    require(feeRateBasisPoints <= 10000, \"fee rate > 100%\");\n\n    int processorFee = captureAmount * feeRateBasisPoints / 10000;\n    int merchantAmount = captureAmount - processorFee;\n    require(merchantAmount > 330, \"merchant payout below dust\");\n    int change = held - captureAmount;\n\n    if (processorFee > 330) {\n      if (change > 330) {\n        require(tx.numOutputs == 3, \"expected 3 outputs\");\n        require(tx.outputs[0].value == merchantAmount, \"merchant amount incorrect\");\n        require(tx.outputs[0].scriptPubKey == merchantScript, \"merchant script incorrect\");\n        require(tx.outputs[1].value == processorFee, \"processor fee incorrect\");\n        require(tx.outputs[1].scriptPubKey == processorScript, \"processor script incorrect\");\n        require(tx.outputs[2].value == change, \"change amount incorrect\");\n        require(tx.outputs[2].scriptPubKey == customerScript, \"change script incorrect\");\n      } else {\n        require(tx.numOutputs == 2, \"expected 2 outputs\");\n        int merchantWithChange = merchantAmount + change;\n        require(tx.outputs[0].value == merchantWithChange, \"merchant amount incorrect\");\n        require(tx.outputs[0].scriptPubKey == merchantScript, \"merchant script incorrect\");\n        require(tx.outputs[1].value == processorFee, \"processor fee incorrect\");\n        require(tx.outputs[1].scriptPubKey == processorScript, \"processor script incorrect\");\n      }\n    } else {\n      if (change > 330) {\n        require(tx.numOutputs == 2, \"expected 2 outputs\");\n        int merchantWithFee = merchantAmount + processorFee;\n        require(tx.outputs[0].value == merchantWithFee, \"merchant amount incorrect\");\n        require(tx.outputs[0].scriptPubKey == merchantScript, \"merchant script incorrect\");\n        require(tx.outputs[1].value == change, \"change amount incorrect\");\n        require(tx.outputs[1].scriptPubKey == customerScript, \"change script incorrect\");\n      } else {\n        require(tx.numOutputs == 1, \"expected 1 output\");\n        require(tx.outputs[0].value == held, \"merchant amount incorrect\");\n        require(tx.outputs[0].scriptPubKey == merchantScript, \"merchant script incorrect\");\n      }\n    }\n  }\n\n  function void(signature merchantSig) {\n    require(checkSig(merchantSig, merchantPubkey), \"invalid merchant signature\");\n\n    let held = tx.input.current.value;\n    require(tx.numOutputs == 1, \"expected 1 output for void\");\n    require(tx.outputs[0].value == held, \"release amount incorrect\");\n    require(tx.outputs[0].scriptPubKey == customerScript, \"release script incorrect\");\n  }\n\n  function refund() {\n    require(tx.time >= releaseBlockHeight, \"release timelock not reached\");\n\n    let held = tx.input.current.value;\n    require(tx.numOutputs == 1, \"expected 1 output for refund\");\n    require(tx.outputs[0].value == held, \"refund amount incorrect\");\n    require(tx.outputs[0].scriptPubKey == customerScript, \"refund script incorrect\");\n  }\n\n  function unilateral(signature merchantSig) tapscript {\n    require(older(exit));\n    require(checkSig(merchantSig, merchantPubkey));\n  }\n}",
+  "compiler": {
+    "name": "arkade-compiler",
+    "version": "0.1.0"
+  },
+  "updatedAt": "2026-07-27T23:12:31.260297223+00:00"
+}

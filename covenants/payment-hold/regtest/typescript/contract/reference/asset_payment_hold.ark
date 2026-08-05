@@ -1,0 +1,92 @@
+// Asset Payment Hold Contract (authorize and capture, asset denominated)
+// Same gas-pump flow as payment_hold.ark, but the hold is an Arkade asset
+// amount (e.g. 100 units of a USD stable asset) riding on the VTXO:
+//
+// 1. Authorize: customer funds this covenant with the asset hold.
+// 2. Capture: merchant takes the metered asset amount (witness value, up to
+//    the hold); the remaining asset units return to the customer.
+// 3. Void: merchant returns the full hold to the customer immediately.
+// 4. Refund: after releaseBlockHeight anyone can return the hold — the
+//    automatic release if the merchant never charges.
+//
+// Processor fee routing is omitted here to keep the asset mechanics in
+// focus; see payment_hold.ark for basis-point fee handling.
+
+contract AssetPaymentHold(
+  // Asset ID of the held asset (txid, group index)
+  bytes32 assetIdTxid,
+  int assetIdGidx,
+
+  // Output scripts (P2TR scriptPubKeys)
+  bytes merchantScript,
+  bytes customerScript,
+
+  // Auto-release timelock (block height)
+  int releaseBlockHeight,
+
+  // Capture/void authorization key
+  pubkey merchantPubkey,
+
+  // Exit timelock in blocks
+  int exit
+) {
+
+  // Capture: merchant takes captureAmount of the held asset; the remainder
+  // returns to the customer. Output count is pinned, so the merchant cannot
+  // attach own change outputs; relax when merchant-funded fees are needed.
+  function capture(int captureAmount, signature merchantSig) {
+    require(checkSig(merchantSig, merchantPubkey), "invalid merchant signature");
+    require(this.activeInputIndex == 0, "hold must be input 0");
+
+    int heldAssets = tx.inputs[0].assets.lookup(assetIdTxid, assetIdGidx);
+    require(captureAmount > 0, "zero capture");
+    require(captureAmount <= heldAssets, "capture exceeds hold");
+
+    require(tx.outputs[0].scriptPubKey == merchantScript, "merchant script incorrect");
+    require(tx.outputs[0].assets.lookup(assetIdTxid, assetIdGidx) == captureAmount, "merchant asset amount incorrect");
+    require(tx.outputs[0].value >= 330, "merchant output below dust");
+
+    int changeAssets = heldAssets - captureAmount;
+    if (changeAssets > 0) {
+      require(tx.numOutputs == 2, "expected 2 outputs for partial capture");
+      require(tx.outputs[1].scriptPubKey == customerScript, "change script incorrect");
+      require(tx.outputs[1].assets.lookup(assetIdTxid, assetIdGidx) == changeAssets, "change asset amount incorrect");
+      require(tx.outputs[1].value >= 330, "change output below dust");
+    } else {
+      require(tx.numOutputs == 1, "expected 1 output for full capture");
+    }
+  }
+
+  // Void: merchant cancels the authorization; the full asset hold and the
+  // riding sats return to the customer without waiting for the timelock.
+  function void(signature merchantSig) {
+    require(checkSig(merchantSig, merchantPubkey), "invalid merchant signature");
+    require(this.activeInputIndex == 0, "hold must be input 0");
+
+    int heldAssets = tx.inputs[0].assets.lookup(assetIdTxid, assetIdGidx);
+    require(tx.numOutputs == 1, "expected 1 output for void");
+    require(tx.outputs[0].scriptPubKey == customerScript, "release script incorrect");
+    require(tx.outputs[0].assets.lookup(assetIdTxid, assetIdGidx) == heldAssets, "release asset amount incorrect");
+    require(tx.outputs[0].value >= tx.inputs[0].value, "riding sats not returned");
+  }
+
+  // Refund: timelocked automatic release back to the customer.
+  function refund() {
+    require(tx.time >= releaseBlockHeight, "release timelock not reached");
+    require(this.activeInputIndex == 0, "hold must be input 0");
+
+    int heldAssets = tx.inputs[0].assets.lookup(assetIdTxid, assetIdGidx);
+    require(tx.numOutputs == 1, "expected 1 output for refund");
+    require(tx.outputs[0].scriptPubKey == customerScript, "refund script incorrect");
+    require(tx.outputs[0].assets.lookup(assetIdTxid, assetIdGidx) == heldAssets, "refund asset amount incorrect");
+    require(tx.outputs[0].value >= tx.inputs[0].value, "riding sats not returned");
+  }
+
+  // Unilateral exit (CSV): merchant reclaims after the CSV delay.
+  // Note: customer's exit is via the refund path above; no single customer
+  // pubkey exists.
+  function unilateral(signature merchantSig) tapscript {
+    require(older(exit));
+    require(checkSig(merchantSig, merchantPubkey));
+  }
+}

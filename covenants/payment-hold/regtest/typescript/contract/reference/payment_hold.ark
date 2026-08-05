@@ -1,0 +1,124 @@
+// Payment Hold Contract (authorize and capture)
+// Gas-pump style card payment over a BTC hold:
+//
+// 1. Authorize: customer taps and funds this covenant with the hold amount
+//    (e.g. 100 000 sats before fueling starts). The funded VTXO value IS the
+//    hold; no separate amount parameter is needed.
+// 2. Capture: merchant settles the actual amount — chosen at capture time as
+//    a witness value, up to the hold — minus the processor fee. The unused
+//    remainder returns to the customer as change.
+// 3. Void: merchant cancels the authorization and returns the full hold to
+//    the customer immediately.
+// 4. Refund: after releaseBlockHeight anyone can return the hold to the
+//    customer — the automatic release if the merchant never charges.
+//
+// Unlike payment_auth.ark, the settled amount is not fixed at authorization
+// time: capture takes it as a witness, so one covenant covers any final
+// charge up to the hold.
+
+contract PaymentHold(
+  // Processor fee in basis points of the captured amount
+  int feeRateBasisPoints,
+
+  // Output scripts (P2TR scriptPubKeys)
+  bytes merchantScript,
+  bytes processorScript,
+  bytes customerScript,
+
+  // Auto-release timelock (block height)
+  int releaseBlockHeight,
+
+  // Capture/void authorization key
+  pubkey merchantPubkey,
+
+  // Exit timelock in blocks
+  int exit
+) {
+
+  // Capture: merchant-authorized settlement of captureAmount <= hold.
+  // Sub-dust fee or change is routed into the merchant payout because a
+  // sub-330-sat Taproot output is not viable.
+  function capture(int captureAmount, signature merchantSig) {
+    require(checkSig(merchantSig, merchantPubkey), "invalid merchant signature");
+
+    let held = tx.input.current.value;
+    require(captureAmount > 330, "capture below dust");
+    require(captureAmount <= held, "capture exceeds hold");
+    // 21 000 BTC ceiling keeps captureAmount * feeRateBasisPoints inside i64
+    require(captureAmount <= 2100000000000, "capture too large");
+    require(feeRateBasisPoints >= 0, "negative fee rate");
+    require(feeRateBasisPoints <= 10000, "fee rate > 100%");
+
+    int processorFee = captureAmount * feeRateBasisPoints / 10000;
+    int merchantAmount = captureAmount - processorFee;
+    require(merchantAmount > 330, "merchant payout below dust");
+    int change = held - captureAmount;
+
+    if (processorFee > 330) {
+      if (change > 330) {
+        // Full split: merchant + processor + customer change
+        require(tx.numOutputs == 3, "expected 3 outputs");
+        require(tx.outputs[0].value == merchantAmount, "merchant amount incorrect");
+        require(tx.outputs[0].scriptPubKey == merchantScript, "merchant script incorrect");
+        require(tx.outputs[1].value == processorFee, "processor fee incorrect");
+        require(tx.outputs[1].scriptPubKey == processorScript, "processor script incorrect");
+        require(tx.outputs[2].value == change, "change amount incorrect");
+        require(tx.outputs[2].scriptPubKey == customerScript, "change script incorrect");
+      } else {
+        // Sub-dust change rounds up into the merchant payout
+        require(tx.numOutputs == 2, "expected 2 outputs");
+        int merchantWithChange = merchantAmount + change;
+        require(tx.outputs[0].value == merchantWithChange, "merchant amount incorrect");
+        require(tx.outputs[0].scriptPubKey == merchantScript, "merchant script incorrect");
+        require(tx.outputs[1].value == processorFee, "processor fee incorrect");
+        require(tx.outputs[1].scriptPubKey == processorScript, "processor script incorrect");
+      }
+    } else {
+      // Sub-dust fee rides with the merchant payout; processor settles out of band
+      if (change > 330) {
+        require(tx.numOutputs == 2, "expected 2 outputs");
+        int merchantWithFee = merchantAmount + processorFee;
+        require(tx.outputs[0].value == merchantWithFee, "merchant amount incorrect");
+        require(tx.outputs[0].scriptPubKey == merchantScript, "merchant script incorrect");
+        require(tx.outputs[1].value == change, "change amount incorrect");
+        require(tx.outputs[1].scriptPubKey == customerScript, "change script incorrect");
+      } else {
+        // Full capture: everything goes to the merchant
+        require(tx.numOutputs == 1, "expected 1 output");
+        require(tx.outputs[0].value == held, "merchant amount incorrect");
+        require(tx.outputs[0].scriptPubKey == merchantScript, "merchant script incorrect");
+      }
+    }
+  }
+
+  // Void: merchant cancels the authorization; the full hold returns to the
+  // customer without waiting for the timelock.
+  function void(signature merchantSig) {
+    require(checkSig(merchantSig, merchantPubkey), "invalid merchant signature");
+
+    let held = tx.input.current.value;
+    require(tx.numOutputs == 1, "expected 1 output for void");
+    require(tx.outputs[0].value == held, "release amount incorrect");
+    require(tx.outputs[0].scriptPubKey == customerScript, "release script incorrect");
+  }
+
+  // Refund: timelocked automatic release back to the customer.
+  // Becomes valid after releaseBlockHeight — effectively anyone-can-spend
+  // into customerScript.
+  function refund() {
+    require(tx.time >= releaseBlockHeight, "release timelock not reached");
+
+    let held = tx.input.current.value;
+    require(tx.numOutputs == 1, "expected 1 output for refund");
+    require(tx.outputs[0].value == held, "refund amount incorrect");
+    require(tx.outputs[0].scriptPubKey == customerScript, "refund script incorrect");
+  }
+
+  // Unilateral exit (CSV): merchant reclaims after the CSV delay.
+  // Note: customer's exit is via the refund path above; no single customer
+  // pubkey exists.
+  function unilateral(signature merchantSig) tapscript {
+    require(older(exit));
+    require(checkSig(merchantSig, merchantPubkey));
+  }
+}

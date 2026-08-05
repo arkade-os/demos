@@ -1,0 +1,70 @@
+{
+  "version": 0,
+  "name": "payment-hold",
+  "params": [
+    { "name": "merchantPubkey", "type": "pubkey" },
+    { "name": "customerPubkey", "type": "pubkey" },
+    { "name": "merchantPayout", "type": "bytes" },
+    { "name": "customerPayout", "type": "bytes" },
+    { "name": "orderSalt", "type": "bytes" },
+    { "name": "releaseHeight", "type": "int" },
+    { "name": "exitBlocks", "type": "int" },
+    { "name": "server", "type": "pubkey" }
+  ],
+  "functions": {
+    "capture": {
+      "inputs": [{ "name": "captureAmount", "type": "int" }],
+      "tapscript": { "signers": ["$merchantPubkey", "$server"] },
+      "arkadeScript": {
+        "asm": [
+          "$orderSalt", "DROP",
+          0, "INSPECTOUTPUTVALUE", "EQUALVERIFY",
+          0, "INSPECTOUTPUTSCRIPTPUBKEY", 1, "EQUALVERIFY", "$merchantPayout", "EQUALVERIFY",
+          1, "INSPECTOUTPUTSCRIPTPUBKEY", 1, "EQUALVERIFY", "$customerPayout", "EQUALVERIFY",
+          0, "INSPECTOUTPUTVALUE", 1, "INSPECTOUTPUTVALUE", "ADD",
+          "PUSHCURRENTINPUTINDEX", "INSPECTINPUTVALUE", "EQUAL"
+        ],
+        "witness": ["captureAmount"]
+      }
+    },
+    "captureAll": {
+      "tapscript": { "signers": ["$merchantPubkey", "$server"] },
+      "arkadeScript": {
+        "asm": [
+          "PUSHCURRENTINPUTINDEX", "INSPECTINPUTVALUE",
+          0, "INSPECTOUTPUTVALUE", "EQUALVERIFY",
+          0, "INSPECTOUTPUTSCRIPTPUBKEY", 1, "EQUALVERIFY", "$merchantPayout", "EQUAL"
+        ]
+      }
+    },
+    "void": {
+      "tapscript": { "signers": ["$merchantPubkey", "$server"] },
+      "arkadeScript": {
+        "asm": [
+          "PUSHCURRENTINPUTINDEX", "INSPECTINPUTVALUE",
+          0, "INSPECTOUTPUTVALUE", "EQUALVERIFY",
+          0, "INSPECTOUTPUTSCRIPTPUBKEY", 1, "EQUALVERIFY", "$customerPayout", "EQUAL"
+        ]
+      }
+    },
+    "reclaim": {
+      "tapscript": {
+        "signers": ["$customerPubkey", "$server"],
+        "cltv": "$releaseHeight"
+      },
+      "arkadeScript": {
+        "asm": [
+          "PUSHCURRENTINPUTINDEX", "INSPECTINPUTVALUE",
+          0, "INSPECTOUTPUTVALUE", "EQUALVERIFY",
+          0, "INSPECTOUTPUTSCRIPTPUBKEY", 1, "EQUALVERIFY", "$customerPayout", "EQUAL"
+        ]
+      }
+    },
+    "exit": {
+      "tapscript": {
+        "signers": ["$merchantPubkey"],
+        "csv": { "type": "blocks", "value": "$exitBlocks" }
+      }
+    }
+  }
+}
