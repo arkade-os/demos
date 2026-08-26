@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node index.ts"
+  },
+  "dependencies": {
+    "@arkade-os/solver-discovery": "^0.2.3",
+    "@arkade-os/swap": "^0.0.9"
+  }
+}
