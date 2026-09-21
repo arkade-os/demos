@@ -9,42 +9,37 @@ import {
   SQLiteContractRepository,
   SQLiteWalletRepository,
 } from "@arkade-os/sdk/repositories/sqlite";
-import Database from "better-sqlite3";
-import { EventSource } from "eventsource";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 
 const SEED_PHRASE =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const DELEGATE_URL = "https://delegate.arkade.money" as const;
 const EXPLORER_URL = "https://arkade.space" as const;
 
-/** 1. Polyfill EventSource
- * EventSource is used internally by the SDK for settlement events (SSE).
- * It is not available in Node.js by default, so we need to polyfill it.
- */
-(globalThis as any).EventSource = EventSource;
-
-/** 2. Initialize SQLite database */
+/** 1. Initialize SQLite database */
 const initDB = (dbPath: string) => {
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = new DatabaseSync(dbPath);
+  db.exec("PRAGMA journal_mode = WAL");
   const sqlExecutor = {
     run: async (sql, params) => {
-      db.prepare(sql).run(...(params ?? []));
+      db.prepare(sql).run(...((params ?? []) as SQLInputValue[]));
     },
     get: async <T>(sql: string, params?: unknown[]) =>
-      db.prepare(sql).get(...(params ?? [])) as T | undefined,
+      db.prepare(sql).get(...((params ?? []) as SQLInputValue[])) as
+        | T
+        | undefined,
     all: async <T>(sql: string, params?: unknown[]) =>
-      db.prepare(sql).all(...(params ?? [])) as T[],
+      db.prepare(sql).all(...((params ?? []) as SQLInputValue[])) as T[],
   } as const satisfies SQLExecutor;
   const closeDB = () => db.close();
   return { sqlExecutor, closeDB };
 };
 const { sqlExecutor, closeDB } = initDB("wallet.sqlite");
 
-/** 3. Create identity */
+/** 2. Create identity */
 const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE);
 
-/** 4. Create wallet */
+/** 3. Create wallet */
 const wallet = await Wallet.create({
   identity,
   arkProvider: new RestArkProvider(),
@@ -69,10 +64,10 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 5. Fetch available balance */
+/** 4. Fetch available balance */
 const { available, assets } = await wallet.getBalance();
 
-/** 6. Sweep all to self (consolidate) */
+/** 5. Sweep all to self (consolidate) */
 if (available === 0) {
   throw new Error("No available balance", {
     cause: await wallet.getAddress(),
@@ -89,7 +84,7 @@ console.log(
   `Consolidated ${available} sats + ${assets.length} asset(s): ${EXPLORER_URL}/tx/${sweepTxid}`,
 );
 
-/** 7. Graceful shutdown */
+/** 6. Graceful shutdown */
 console.log("Disposing wallet...");
 await wallet.dispose();
 

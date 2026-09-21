@@ -2,15 +2,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node index.ts"
+    "dev": "node --experimental-eventsource --disable-warning=UNDICI-ES index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.4.47",
-    "@scure/base": "^2.2.0",
-    "better-sqlite3": "^12.11.1",
-    "eventsource": "^4.1.0"
+    "@arkade-os/sdk": "^0.4.74",
+    "@scure/base": "^2.4.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13"
+    "@types/node": "^26.6.2",
+    "typescript": "^7.0.2"
   }
 }

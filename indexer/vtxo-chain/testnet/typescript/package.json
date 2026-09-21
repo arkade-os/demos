@@ -3,14 +3,16 @@
   "type": "module",
   "scripts": {
     "dev": "node index.ts",
-    "render": "mmdc -i dag.mmd -o dag.svg"
+    "render": "mmdc -i dag.mmd -o dag.svg",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.4.47",
-    "@scure/base": "^2.2.0"
+    "@arkade-os/sdk": "^0.4.74",
+    "@scure/base": "^2.4.0"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "^11.16.0",
-    "@types/node": "^26.1.1"
+    "@mermaid-js/mermaid-cli": "^11.17.0",
+    "@types/node": "^26.6.2",
+    "typescript": "^7.0.2"
   }
 }

@@ -9,8 +9,7 @@ import {
   SQLiteContractRepository,
   SQLiteWalletRepository,
 } from "@arkade-os/sdk/repositories/sqlite";
-import Database from "better-sqlite3";
-import { EventSource } from "eventsource";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 
 const SEED_PHRASE =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
@@ -22,36 +21,32 @@ const IGNORE_ASSETS = [
   "952ce3af7dd640a80984962156b63e7b3d3f2726c22f46e14f81daac2297170b0000",
 ];
 
-/** 1. Polyfill EventSource
- * EventSource is used internally by the SDK for settlement events (SSE).
- * It is not available in Node.js by default, so we need to polyfill it.
- */
-(globalThis as any).EventSource = EventSource;
-
-/** 2. Initialize SQLite database */
+/** 1. Initialize SQLite database */
 const initDB = (dbPath: string) => {
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = new DatabaseSync(dbPath);
+  db.exec("PRAGMA journal_mode = WAL");
   const sqlExecutor = {
     run: async (sql, params) => {
-      db.prepare(sql).run(...(params ?? []));
+      db.prepare(sql).run(...((params ?? []) as SQLInputValue[]));
     },
     get: async <T>(sql: string, params?: unknown[]) =>
-      db.prepare(sql).get(...(params ?? [])) as T | undefined,
+      db.prepare(sql).get(...((params ?? []) as SQLInputValue[])) as
+        | T
+        | undefined,
     all: async <T>(sql: string, params?: unknown[]) =>
-      db.prepare(sql).all(...(params ?? [])) as T[],
+      db.prepare(sql).all(...((params ?? []) as SQLInputValue[])) as T[],
   } as const satisfies SQLExecutor;
   const closeDB = () => db.close();
   return { sqlExecutor, closeDB };
 };
 const { sqlExecutor, closeDB } = initDB("wallet.sqlite");
 
-/** 3. Create identity */
+/** 2. Create identity */
 const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
   isMainnet: false,
 });
 
-/** 4. Create wallet */
+/** 3. Create wallet */
 const wallet = await Wallet.create({
   identity,
   arkProvider: new RestArkProvider(OPERATOR_URL),
@@ -76,10 +71,10 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 5. Fetch asset balances */
+/** 4. Fetch asset balances */
 const assets = await wallet.getBalance().then((balance) => balance.assets);
 
-/** 6. Filter assets to burn */
+/** 5. Filter assets to burn */
 const toBurn = assets.filter(({ assetId }) => !IGNORE_ASSETS.includes(assetId));
 
 if (!toBurn.length) {
@@ -88,10 +83,10 @@ if (!toBurn.length) {
   });
 }
 
-/** 7. Get asset manager */
+/** 6. Get asset manager */
 const manager = wallet.assetManager;
 
-/** 8. Burn assets */
+/** 7. Burn assets */
 const burnResults: Array<{
   assetId: string;
   amount: bigint;
@@ -116,10 +111,10 @@ for (const asset of toBurn) {
   }
 }
 
-/** 9. Print summary */
+/** 8. Print summary */
 console.log(burnResults.flat());
 
-/** 10. Graceful shutdown */
+/** 9. Graceful shutdown */
 console.log("Disposing wallet...");
 await wallet.dispose();
 

@@ -9,8 +9,7 @@ import {
   SQLiteWalletRepository,
   type SQLExecutor,
 } from "@arkade-os/sdk/repositories/sqlite";
-import Database from "better-sqlite3";
-import { EventSource } from "eventsource";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 
 /** When to process the delegation request */
 const DELEGATE_IN_SECONDS = 60 as const;
@@ -22,33 +21,28 @@ const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
 const ONE_DAY_IN_SECONDS = 259_200 as const;
 
-/** 1. Polyfill EventSource
- * EventSource is used internally by the SDK for settlement events (SSE).
- * It is not available in Node.js by default, so we need to polyfill it.
- */
-console.log("Polyfilling EventSource...");
-(globalThis as any).EventSource = EventSource;
-
-/** 2. Initialize SQLite database */
+/** 1. Initialize SQLite database */
 console.log("Initalizing SQLite database...");
 const initDB = (dbPath: string) => {
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = new DatabaseSync(dbPath);
+  db.exec("PRAGMA journal_mode = WAL");
   const sqlExecutor = {
     run: async (sql, params) => {
-      db.prepare(sql).run(...(params ?? []));
+      db.prepare(sql).run(...((params ?? []) as SQLInputValue[]));
     },
     get: async <T>(sql: string, params?: unknown[]) =>
-      db.prepare(sql).get(...(params ?? [])) as T | undefined,
+      db.prepare(sql).get(...((params ?? []) as SQLInputValue[])) as
+        | T
+        | undefined,
     all: async <T>(sql: string, params?: unknown[]) =>
-      db.prepare(sql).all(...(params ?? [])) as T[],
+      db.prepare(sql).all(...((params ?? []) as SQLInputValue[])) as T[],
   } as const satisfies SQLExecutor;
   const closeDB = () => db.close();
   return { sqlExecutor, closeDB };
 };
 const { sqlExecutor, closeDB } = initDB("wallet.sqlite");
 
-/** 3. Create wallet */
+/** 2. Create wallet */
 console.log("Creating wallet...");
 const wallet = await Wallet.create({
   identity: MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
@@ -76,7 +70,7 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 4. Fetch delegable outputs */
+/** 3. Fetch delegable outputs */
 console.log("Fetching delegable outputs...");
 const contractManager = await wallet.getContractManager();
 let delegableOutputs = await contractManager
@@ -97,7 +91,7 @@ if (!delegableOutputs.length) {
   });
 }
 
-/** 5. Sweep previously settled outputs (if necessary)
+/** 4. Sweep previously settled outputs (if necessary)
  *
  * Delegation requests will be rejected if any of the inputs are invalid,
  * which includes recently settled virtual outputs.
@@ -151,7 +145,7 @@ if (settledOutputs.length > 0) {
     );
 }
 
-/** 6. Check delegable total is at least the dust amount + delegate fee */
+/** 5. Check delegable total is at least the dust amount + delegate fee */
 const delegateManager = await wallet.getDelegateManager();
 
 if (!delegateManager) {
@@ -178,7 +172,7 @@ if (delegableTotal < wallet.dustAmount + fee) {
   });
 }
 
-/** 7. Submit delegation request */
+/** 6. Submit delegation request */
 console.log(
   `Requesting delegation of ${delegableOutputs.length} output(s):`,
   delegableOutputs.map(({ txid, vout }) => `${txid}:${vout}`),
@@ -208,7 +202,7 @@ if (delegated.length < delegableOutputs.length) {
   );
 }
 
-/** 8. Graceful shutdown */
+/** 7. Graceful shutdown */
 console.log("Disposing contract manager...");
 contractManager.dispose();
 

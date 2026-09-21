@@ -2,11 +2,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node index.ts"
+    "dev": "node index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.4.47",
-    "@noble/hashes": "^2.2.0",
-    "@scure/base": "^2.2.0"
+    "@arkade-os/sdk": "^0.4.74",
+    "@noble/hashes": "^2.4.0",
+    "@scure/base": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "typescript": "^7.0.2"
   }
 }

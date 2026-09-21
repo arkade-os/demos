@@ -1,3 +1,5 @@
+// TODO: broken, needs fixing
+
 import {
   arkade,
   buildOffchainTx,
@@ -7,6 +9,7 @@ import {
   RestEmulatorProvider,
   RestIndexerProvider,
   Transaction,
+  networks
 } from "@arkade-os/sdk";
 import { base64 } from "@scure/base";
 
@@ -64,7 +67,8 @@ const contractBalance = contractInputs.reduce(
 if (contractBalance < OUTPUT_AMOUNT) {
   throw new Error("Contract address not funded", {
     cause: {
-      address: contract.address,
+      // TODO: temp workaround for contract.address() defaulting to mainnet
+      address: contract.vtxoScript.address(networks.mutinynet.hrp, builder.serverKey).encode(),
       expected: OUTPUT_AMOUNT,
       received: contractBalance,
       need: OUTPUT_AMOUNT - contractBalance,
