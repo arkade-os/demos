@@ -1,15 +1,15 @@
-// TODO: broken, needs fixing
-
 import {
   arkade,
   buildOffchainTx,
+  setArkPsbtField,
+  getNetwork,
+  PrevArkTxField,
   EmulatorPacket,
   Extension,
   RestArkProvider,
   RestEmulatorProvider,
   RestIndexerProvider,
   Transaction,
-  networks
 } from "@arkade-os/sdk";
 import { base64 } from "@scure/base";
 
@@ -42,12 +42,19 @@ const program = {
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
+const FAUCET_URL = "https://faucet.mutinynet.arkade.sh/faucet" as const;
 
 /** 1. Create script builder with support for cosigner, indexer and emulator. */
+const operator = new RestArkProvider(OPERATOR_URL);
+const indexer = new RestIndexerProvider(OPERATOR_URL);
+const emulator = new RestEmulatorProvider(EMULATOR_URL);
+const network = getNetwork("mutinynet");
+
 const builder = await ContractBuilder.connect({
-  arkade: new RestArkProvider(OPERATOR_URL),
-  indexer: new RestIndexerProvider(OPERATOR_URL),
-  emulator: new RestEmulatorProvider(EMULATOR_URL),
+  arkade: operator,
+  indexer,
+  emulator,
+  network,
 });
 
 /** 2. Instantiate the contract, binding the program's params to concrete values. */
@@ -56,19 +63,23 @@ const contract = builder.contract(program, {
   outputAmount: OUTPUT_AMOUNT,
 });
 
-/** 3. Fetch contract inputs and determine whether the contract can be executed. */
-const contractInputs = await contract.getUtxos();
+/** Fund the contract so the demo runs end to end without a separate manual step. */
+await fundViaFaucet(contract.address, Number(OUTPUT_AMOUNT));
+
+/** 3. Wait for the funded coin(s) to land, then check the contract can be executed. */
+const contractInputs = await waitFor(() => contract.getUtxos(), "contract funding from the faucet");
 
 const contractBalance = contractInputs.reduce(
   (total, input) => total + BigInt(input.value),
   0n,
 );
 
+console.log(`Contract funded with ${contractBalance} sats: ${EXPLORER_URL}/address/${contract.address}`);
+
 if (contractBalance < OUTPUT_AMOUNT) {
   throw new Error("Contract address not funded", {
     cause: {
-      // TODO: temp workaround for contract.address() defaulting to mainnet
-      address: contract.vtxoScript.address(networks.mutinynet.hrp, builder.serverKey).encode(),
+      address: contract.address,
       expected: OUTPUT_AMOUNT,
       received: contractBalance,
       need: OUTPUT_AMOUNT - contractBalance,
@@ -127,7 +138,15 @@ const { arkTx, checkpoints } = buildOffchainTx(
   /** The operator's checkpoint unroll tapscript. */
   builder.checkpoint,
 );
-
+/** Attach each input's source transaction as its PrevArkTxField, which the emulator requires. */
+for (let i = 0; i < inputs.length; i++) {
+  const { txs } = await indexer.getVirtualTxs([inputs[i].txid]);
+  if (!txs[0]) {
+    throw new Error(`indexer returned no virtual tx for input txid ${inputs[i].txid}`);
+  }
+  const sourceTx = Transaction.fromPSBT(base64.decode(txs[0])).unsignedTx;
+  setArkPsbtField(arkTx, i, PrevArkTxField, sourceTx);
+}
 /**
  * 5. Submit transaction.
  * `payExactAmount` is signed only by the operator (`$operatorPubkey`)
@@ -145,3 +164,34 @@ const txid = Transaction.fromPSBT(base64.decode(submitted.signedArkTx)).id;
 console.log(
   `Spent ${inputs.length} contract input(s): ${EXPLORER_URL}/tx/${txid}`,
 );
+
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Ask the Arkade faucet to fund an ark address directly (offchain). */
+async function fundViaFaucet(address: string, amount: number): Promise<void> {
+  const res = await fetch(FAUCET_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address, amount }),
+  });
+  if (!res.ok) throw new Error(`faucet failed: ${res.status} ${await res.text()}`);
+}
+
+/** Poll until a lookup returns at least one item, or time out. */
+async function waitFor<T>(
+  lookup: () => Promise<T[]>,
+  label: string,
+  timeoutMs = 60_000,
+): Promise<T[]> {
+  console.log(`Waiting for ${label}...`);
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const items = await lookup();
+    if (items.length > 0) return items;
+    await sleep(3_000);
+  }
+  throw new Error(`timed out waiting for ${label}`);
+}
