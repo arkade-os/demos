@@ -1,0 +1,17 @@
+[package]
+name = "asset"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+bitcoin = { version = "0.32.7", features = ["rand"] }
+esplora-client = { version = "0.10", features = ["async-https"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+rustls = { version = "0.23", features = ["ring"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+ark-bdk-wallet = { git = "https://github.com/arkade-os/rust-sdk", rev = "d8bc8a3e0860ffb5d7500d199844179715897293" }
+ark-client = { git = "https://github.com/arkade-os/rust-sdk", rev = "d8bc8a3e0860ffb5d7500d199844179715897293" }
+ark-rest = { git = "https://github.com/arkade-os/rust-sdk", rev = "d8bc8a3e0860ffb5d7500d199844179715897293" }
+ark-core = { git = "https://github.com/arkade-os/rust-sdk", rev = "d8bc8a3e0860ffb5d7500d199844179715897293" }
