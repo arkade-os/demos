@@ -1,0 +1,76 @@
+name: payment-hold-smoke
+
+on:
+  pull_request:
+    paths:
+      - "covenants/payment-hold/**"
+      - ".github/workflows/payment-hold-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: covenants/payment-hold/regtest/typescript
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ArkLabsHQ/arkade-regtest
+          path: arkade-regtest
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Offline unit tests
+        run: pnpm test
+
+      - name: Start arkade regtest stack
+        working-directory: arkade-regtest
+        run: node regtest.mjs start
+
+      - name: Wait for arkd / emulator / esplora
+        working-directory: .
+        run: |
+          set -e
+          for url in \
+            http://localhost:7070/v1/info \
+            http://localhost:7073/v1/info \
+            "http://localhost:3000/api/blocks/tip/height"; do
+            ok=""
+            for i in $(seq 1 90); do
+              if curl -fsS "$url" >/dev/null 2>&1; then ok=1; break; fi
+              sleep 2
+            done
+            if [ -z "$ok" ]; then
+              echo "service not ready: $url"
+              docker ps -a
+              exit 1
+            fi
+            echo "ready: $url"
+          done
+
+      - name: End-to-end smoke (covenant gates G1-G4)
+        env:
+          MINE_CMD: node ${{ github.workspace }}/arkade-regtest/regtest.mjs mine {n}
+        run: pnpm smoke
+
+      - name: Stack logs on failure
+        if: failure()
+        working-directory: .
+        run: |
+          docker ps -a || true
+          for c in arkd emulator bitcoin esplora; do
+            echo "=== $c ==="
+            docker logs "$c" 2>&1 | tail -60 || true
+          done

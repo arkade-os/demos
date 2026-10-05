@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customer wallet — Payment Hold</title>
+    <link rel="stylesheet" href="/src/web/styles.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="topnav"><a href="/">← demo home</a><a href="/merchant.html">merchant view</a></nav>
+      <h1>👛 Customer wallet</h1>
+      <p class="sub">Tap to authorize a hold; only what the merchant meters gets captured.</p>
+
+      <div class="card">
+        <div class="row">
+          <span class="muted">address</span>
+          <span id="address" class="mono grow"></span>
+          <span id="addr-copy"></span>
+        </div>
+        <div class="row">
+          <span class="muted">balance</span>
+          <strong id="balance">…</strong>
+          <span class="muted">chain height <span id="tip">…</span></span>
+          <span class="muted grow">fund via <code class="k" id="faucet-cmd">pnpm faucet …</code></span>
+          <button id="reset" class="ghost">reset demo state</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Incoming request</h2>
+        <div id="request"><span class="muted">none yet — announce one from the merchant terminal</span></div>
+        <div id="receipt-row" class="row"></div>
+      </div>
+
+      <div class="card">
+        <h2>My holds</h2>
+        <div id="holds"></div>
+      </div>
+
+      <div class="card">
+        <h2>Activity</h2>
+        <div id="log" class="logpane"></div>
+      </div>
+    </main>
+    <script type="module" src="/src/web/customer.ts"></script>
+  </body>
+</html>

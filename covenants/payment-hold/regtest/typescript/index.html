@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payment Hold — authorize &amp; capture on Arkade</title>
+    <link rel="stylesheet" href="/src/web/styles.css" />
+  </head>
+  <body>
+    <main>
+      <h1>⛽ Payment Hold</h1>
+      <p class="sub">
+        Authorize-and-capture payments on Arkade, gas-pump style: tap to lock a hold, the
+        merchant captures the metered amount, the rest returns automatically. No payment
+        processor, no backend — a covenant VTXO is the escrow and the chain is the webhook.
+      </p>
+      <div class="roles">
+        <a href="/merchant.html">
+          <div class="big">🧾</div>
+          <strong>Merchant terminal</strong>
+          <p class="muted">Announce holds, watch authorizations, capture or void.</p>
+        </a>
+        <a href="/customer.html">
+          <div class="big">👛</div>
+          <strong>Customer wallet</strong>
+          <p class="muted">Tap to authorize, watch the settlement, reclaim after the timelock.</p>
+        </a>
+        <a href="/playground/index.html">
+          <div class="big">🛝</div>
+          <strong>Contract playground</strong>
+          <p class="muted">Compile the reference .ark contracts to their JSON artifact in-browser.</p>
+        </a>
+      </div>
+      <div class="card">
+        <h2>Before you start</h2>
+        <p class="muted">
+          The arkade regtest stack must be running (arkd <code class="k">:7070</code>, emulator
+          <code class="k">:7073</code>, esplora <code class="k">:3000</code>). Open the two role
+          pages in separate tabs — holds hand off between them automatically. Fund the customer
+          wallet with the <code class="k">pnpm faucet</code> command shown on its page. See the
+          README for the full walkthrough.
+        </p>
+      </div>
+    </main>
+  </body>
+</html>

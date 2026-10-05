@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contract playground — Payment Hold</title>
+    <link rel="stylesheet" href="/src/web/styles.css" />
+    <style>
+      .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+      .split .card { min-width: 0; }
+      @media (max-width: 900px) { .split { grid-template-columns: minmax(0, 1fr); } }
+      #source { min-height: 480px; font-family: ui-monospace, Menlo, monospace; font-size: 0.82rem; }
+      #output {
+        min-height: 480px; margin: 0; overflow: auto; background: #0f172a; color: #cbd5e1;
+        border-radius: 8px; padding: 0.8rem; font-size: 0.78rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main style="max-width: 1200px">
+      <nav class="topnav"><a href="/">← demo home</a></nav>
+      <h1>🛝 Contract playground</h1>
+      <p class="sub">
+        The reference <code class="k">.ark</code> contracts compiled to their JSON artifact,
+        in-browser, by the Arkade compiler's WASM build. (The demo itself executes the
+        hand-authored SDK program — see the README for why the two artifacts differ today.)
+      </p>
+      <div class="card">
+        <div class="row">
+          <select id="example"></select>
+          <button id="compile" disabled>Compile</button>
+          <span id="status" class="muted grow">loading…</span>
+        </div>
+      </div>
+      <div class="split">
+        <div class="card"><h2>Arkade Script</h2><textarea id="source" spellcheck="false"></textarea></div>
+        <div class="card"><h2>ContractJson artifact</h2><pre id="output"></pre></div>
+      </div>
+    </main>
+    <script type="module" src="/playground/main.ts"></script>
+  </body>
+</html>
