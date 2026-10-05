@@ -9,8 +9,7 @@ import {
   SQLiteContractRepository,
   SQLiteWalletRepository,
 } from "@arkade-os/sdk/repositories/sqlite";
-import Database from "better-sqlite3";
-import { EventSource } from "eventsource";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 
 const SEED_PHRASE =
   "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
@@ -18,36 +17,32 @@ const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const DELEGATE_URL = "https://delegator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
 
-/** 1. Polyfill EventSource
- * EventSource is used internally by the SDK for settlement events (SSE).
- * It is not available in Node.js by default, so we need to polyfill it.
- */
-(globalThis as any).EventSource = EventSource;
-
-/** 2. Initialize SQLite database */
+/** 1. Initialize SQLite database */
 const initDB = (dbPath: string) => {
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
+  const db = new DatabaseSync(dbPath);
+  db.exec("PRAGMA journal_mode = WAL");
   const sqlExecutor = {
     run: async (sql, params) => {
-      db.prepare(sql).run(...(params ?? []));
+      db.prepare(sql).run(...((params ?? []) as SQLInputValue[]));
     },
     get: async <T>(sql: string, params?: unknown[]) =>
-      db.prepare(sql).get(...(params ?? [])) as T | undefined,
+      db.prepare(sql).get(...((params ?? []) as SQLInputValue[])) as
+        | T
+        | undefined,
     all: async <T>(sql: string, params?: unknown[]) =>
-      db.prepare(sql).all(...(params ?? [])) as T[],
+      db.prepare(sql).all(...((params ?? []) as SQLInputValue[])) as T[],
   } as const satisfies SQLExecutor;
   const closeDB = () => db.close();
   return { sqlExecutor, closeDB };
 };
 const { sqlExecutor, closeDB } = initDB("wallet.sqlite");
 
-/** 3. Create identity */
+/** 2. Create identity */
 const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
   isMainnet: false,
 });
 
-/** 4. Create wallet */
+/** 3. Create wallet */
 const wallet = await Wallet.create({
   identity,
   arkProvider: new RestArkProvider(OPERATOR_URL),
@@ -72,10 +67,10 @@ const wallet = await Wallet.create({
   },
 });
 
-/** 5. Get asset manager */
+/** 4. Get asset manager */
 const manager = wallet.assetManager;
 
-/** 6. Issue control asset */
+/** 5. Issue control asset */
 const { arkTxId: controlIssueTxid, assetId: controlAssetId } =
   await manager.issue({
     amount: 1n,
@@ -90,7 +85,7 @@ const { arkTxId: controlIssueTxid, assetId: controlAssetId } =
 
 console.log(`Issued control asset: ${EXPLORER_URL}/tx/${controlIssueTxid}`);
 
-/** 7. Issue asset with control asset */
+/** 6. Issue asset with control asset */
 const { arkTxId: issueTxid, assetId } = await manager.issue({
   amount: 100n /** 1, adjusted for 2 decimals */,
   controlAssetId,
@@ -105,7 +100,7 @@ const { arkTxId: issueTxid, assetId } = await manager.issue({
 
 console.log(`Issued asset with control asset: ${EXPLORER_URL}/tx/${issueTxid}`);
 
-/** 8. Reissue asset with control asset */
+/** 7. Reissue asset with control asset */
 const reissueTxid = await manager.reissue({
   amount: 100n /** 1, adjusted for 2 decimals */,
   assetId,
@@ -113,7 +108,7 @@ const reissueTxid = await manager.reissue({
 
 console.log(`Reissued asset: ${EXPLORER_URL}/tx/${reissueTxid}`);
 
-/** 9. Print summary */
+/** 8. Print summary */
 console.log({
   controlAssetId,
   controlIssueTxid,
@@ -122,7 +117,7 @@ console.log({
   reissueTxid,
 });
 
-/** 10. Graceful shutdown */
+/** 9. Graceful shutdown */
 console.log("Disposing wallet...");
 await wallet.dispose();
 
