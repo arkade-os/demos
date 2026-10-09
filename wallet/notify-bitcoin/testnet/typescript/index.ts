@@ -8,6 +8,7 @@ import {
   RestArkProvider,
   RestDelegateProvider,
   Wallet,
+  isVirtualCoin,
 } from "@arkade-os/sdk";
 import {
   type SQLExecutor,
@@ -92,11 +93,17 @@ const formatOutputs = (
 ) =>
   outputs.map((output) => {
     const { txid, vout, value } = output;
-    if ("virtualStatus" in output) {
-      const {
-        virtualStatus: { state: status },
-      } = output;
-      return { type: "virtual-output", txid, vout, value, status } as const;
+    if (isVirtualCoin(output)) {
+      const { isPreconfirmed, isSwept, isSpent } = output;
+      return {
+        type: "virtual-output",
+        txid,
+        vout,
+        value,
+        isPreconfirmed,
+        isSwept,
+        isSpent,
+      } as const;
     } else {
       const {
         status: { confirmed },
@@ -132,7 +139,7 @@ const stopNotifying = await wallet.notifyIncomingFunds(async (event) => {
 
 console.log("Listening for incoming deposits...");
 console.log("Arkade deposit address:", await wallet.getAddress());
-console.log("Mainnet boarding address:", await wallet.getBoardingAddress());
+console.log("Boarding address:", await wallet.getBoardingAddress());
 console.log("(press Enter to close)");
 
 /** 7. Graceful shutdown */
