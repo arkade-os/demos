@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@arkade-os/sdk':
-        specifier: ^0.4.74
-        version: 0.4.74
+        specifier: 0.5.0-rc.18
+        version: 0.5.0-rc.18
       '@scure/base':
         specifier: ^2.4.0
         version: 2.4.0
@@ -27,8 +27,8 @@ importers:
 
 packages:
 
-  '@arkade-os/sdk@0.4.74':
-    resolution: {integrity: sha512-i3tcSv8VoCOIZC7wUy8+Qh9hH91I4Zf/E9GSepD3clXuHTV11hcqLcWnrofPz6HGL0n5WXt0kB+HVx2xG6g6hQ==}
+  '@arkade-os/sdk@0.5.0-rc.18':
+    resolution: {integrity: sha512-UU8yb6uGjIZIWZ4GPZemExt7BEvR2FaBZ3evCpruzK3/tnRz304G20fROs1qeRxPdqali4ngRD/XauJ8Gw06pQ==}
     engines: {node: '>=22.12.0 <27'}
     peerDependencies:
       '@react-native-async-storage/async-storage': '>=1.0.0'
@@ -136,8 +136,14 @@ packages:
   '@scure/bip39@2.0.1':
     resolution: {integrity: sha512-PsxdFj/d2AcJcZDX1FXN3dDgitDDTmwf78rKZq1a6c1P1Nan1X/Sxc7667zU3U+AN60g7SxxP0YCVw2H/hBycg==}
 
+  '@scure/bip39@2.4.0':
+    resolution: {integrity: sha512-82dxFbZUYboyOf0AXiydsQrFQ5Q4h9mX+O2UkE91ROYmsc0BKMGZLwDmy96Jpa2+vrtoxomjUhy1RPIgH/r2nA==}
+
   '@scure/btc-signer@2.0.1':
     resolution: {integrity: sha512-vk5a/16BbSFZkhh1JIJ0+4H9nceZVo5WzKvJGGWiPp3sQOExeW+L53z3dI6u0adTPoE8ZbL+XEb6hEGzVZSvvQ==}
+
+  '@scure/btc-signer@2.4.1':
+    resolution: {integrity: sha512-ch6h66o9nPhEoe/KciMMUJeH2MBPB8UAJI1if35Fxl6885lKTsc9YoCRqTW0/RjI0Vv9GSg1tmKtHHODyAw81g==}
 
   '@types/node@26.6.2':
     resolution: {integrity: sha512-X1P21scMv4zGKLYqjdGjaKa7COa0RKVYYZZN/NfvLQ1JegxFhdhpZG/Lyn8AXx6CDUavKAd11v6BvfpkDByK8g==}
@@ -274,6 +280,10 @@ packages:
   lodash.memoize@4.1.2:
     resolution: {integrity: sha512-t7j+NzmgnQzTAYXcsHYLgimltOV1MXHtlOWf6GjL9Kj8GK5FInw5JotxvbOs+IvV1/Dzo04/fCGfLVs7aXb4Ag==}
 
+  micro-packed@0.11.1:
+    resolution: {integrity: sha512-agQGBnBCw8OoKQZMUxcaQPaOowdfxyEmBsq4CNAXAXCyB8KxlRG0lTl5GADJIsMEDaFb0trhXBHKYsjTWa5kuw==}
+    engines: {node: '>= 20.19.0'}
+
   micro-packed@0.8.0:
     resolution: {integrity: sha512-AKb8znIvg9sooythbXzyFeChEY0SkW0C6iXECpy/ls0e5BtwXO45J9wD9SLzBztnS4XmF/5kwZknsq+jyynd/A==}
     engines: {node: '>= 20.19.0'}
@@ -326,16 +336,17 @@ packages:
 
 snapshots:
 
-  '@arkade-os/sdk@0.4.74':
+  '@arkade-os/sdk@0.5.0-rc.18':
     dependencies:
       '@bitcoinerlab/descriptors-scure': 3.1.7
       '@marcbachmann/cel-js': 8.0.0
-      '@noble/curves': 2.0.1
+      '@noble/curves': 2.4.0
       '@noble/secp256k1': 3.0.0
-      '@scure/base': 2.0.0
-      '@scure/bip39': 2.0.1
-      '@scure/btc-signer': 2.0.1
+      '@scure/base': 2.4.0
+      '@scure/bip39': 2.4.0
+      '@scure/btc-signer': 2.4.1
       bip68: 1.0.4
+      micro-packed: 0.11.1
       ws-electrumx-client: 1.0.5
     transitivePeerDependencies:
       - '@ledgerhq/ledger-bitcoin'
@@ -345,14 +356,14 @@ snapshots:
       - ecpair
       - utf-8-validate
 
-  '@bitcoinerlab/descriptors-core@3.1.7(@noble/curves@2.0.1)(@noble/hashes@2.4.0)(@scure/base@2.4.0)(@scure/bip32@2.4.0)(@scure/btc-signer@2.0.1)':
+  '@bitcoinerlab/descriptors-core@3.1.7(@noble/curves@2.4.0)(@noble/hashes@2.4.0)(@scure/base@2.4.0)(@scure/bip32@2.4.0)(@scure/btc-signer@2.0.1)':
     dependencies:
       '@bitcoinerlab/miniscript': 2.0.0
       lodash.memoize: 4.1.2
       uint8array-tools: 0.0.9
       varuint-bitcoin: 2.0.1
     optionalDependencies:
-      '@noble/curves': 2.0.1
+      '@noble/curves': 2.4.0
       '@noble/hashes': 2.4.0
       '@scure/base': 2.4.0
       '@scure/bip32': 2.4.0
@@ -360,8 +371,8 @@ snapshots:
 
   '@bitcoinerlab/descriptors-scure@3.1.7':
     dependencies:
-      '@bitcoinerlab/descriptors-core': 3.1.7(@noble/curves@2.0.1)(@noble/hashes@2.4.0)(@scure/base@2.4.0)(@scure/bip32@2.4.0)(@scure/btc-signer@2.0.1)
-      '@noble/curves': 2.0.1
+      '@bitcoinerlab/descriptors-core': 3.1.7(@noble/curves@2.4.0)(@noble/hashes@2.4.0)(@scure/base@2.4.0)(@scure/bip32@2.4.0)(@scure/btc-signer@2.0.1)
+      '@noble/curves': 2.4.0
       '@noble/hashes': 2.4.0
       '@scure/base': 2.4.0
       '@scure/bip32': 2.4.0
@@ -414,12 +425,23 @@ snapshots:
       '@noble/hashes': 2.0.1
       '@scure/base': 2.0.0
 
+  '@scure/bip39@2.4.0':
+    dependencies:
+      '@noble/hashes': 2.4.0
+
   '@scure/btc-signer@2.0.1':
     dependencies:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
       '@scure/base': 2.0.0
       micro-packed: 0.8.0
+
+  '@scure/btc-signer@2.4.1':
+    dependencies:
+      '@noble/curves': 2.4.0
+      '@noble/hashes': 2.4.0
+      '@scure/base': 2.4.0
+      micro-packed: 0.11.1
 
   '@types/node@26.6.2':
     dependencies:
@@ -492,6 +514,10 @@ snapshots:
       ws: 8.21.3
 
   lodash.memoize@4.1.2: {}
+
+  micro-packed@0.11.1:
+    dependencies:
+      '@scure/base': 2.4.0
 
   micro-packed@0.8.0:
     dependencies:
