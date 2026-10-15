@@ -138,8 +138,9 @@ const userSignedSplitCheckpoints = await Promise.all(
 
 /**
  * 16. Submit first tx to server
- * Checkpoints go unsigned: the user's checkpoint signatures are only added
- * at finalization, as the operator won't finalize checkpoints submitted pre-signed
+ * Checkpoints go unsigned, with the user's signatures added at finalization:
+ * arkd v0.9.22+ finalizes on submit when checkpoints arrive already signed,
+ * and the explicit finalize below would then be rejected
  */
 const { signedCheckpointTxs: serverSignedConsolidationCheckpoints } =
   await operator.submitTx(
