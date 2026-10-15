@@ -1,7 +1,9 @@
-// TODO: broken, needs fixing
+// NB: the emulator returns "internal error" although the tx goes through: arkd finalizes
+// it on submit, then the emulator's own finalize is rejected for a duplicated checkpoint signature
 
 import {
   arkade,
+  attachPrevArkTxs,
   buildOffchainTx,
   EmulatorPacket,
   Extension,
@@ -44,9 +46,10 @@ const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
 
 /** 1. Create script builder with support for cosigner, indexer and emulator. */
+const indexer = new RestIndexerProvider(OPERATOR_URL);
 const builder = await ContractBuilder.connect({
   arkade: new RestArkProvider(OPERATOR_URL),
-  indexer: new RestIndexerProvider(OPERATOR_URL),
+  indexer,
   emulator: new RestEmulatorProvider(EMULATOR_URL),
 });
 
@@ -129,7 +132,17 @@ const { arkTx, checkpoints } = buildOffchainTx(
 );
 
 /**
- * 5. Submit transaction.
+ * 5. Attach the transaction that created each input's coin.
+ * The emulator needs it to introspect the inputs, and rejects the submission without it.
+ */
+await attachPrevArkTxs(
+  arkTx,
+  inputs.map(({ txid }) => txid),
+  indexer,
+);
+
+/**
+ * 6. Submit transaction.
  * `payExactAmount` is signed only by the operator (`$operatorPubkey`)
  * No client identity is involved, so the unsigned transaction goes straight to the emulator
  */
@@ -139,7 +152,7 @@ const submitted = await builder.emulator!.submitTx(
 );
 
 /**
- * 6. Extract the finalized transaction's ID
+ * 7. Extract the finalized transaction's ID
  */
 const txid = Transaction.fromPSBT(base64.decode(submitted.signedArkTx)).id;
 console.log(
