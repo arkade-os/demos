@@ -12,74 +12,74 @@
 
 <!-- input introspection -->
 
-- [ ] pin input to an outpoint `OP_INSPECTINPUTOUTPOINT`
+- [-] pin input to an outpoint `OP_INSPECTINPUTOUTPOINT`
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
-  - [ ] testnet
-    - [ ] typescript
+  - [-] testnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
 
-- [ ] require minimum input value `OP_INSPECTINPUTVALUE`
+- [-] require minimum input value `OP_INSPECTINPUTVALUE`
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
-  - [ ] testnet
-    - [ ] typescript
+  - [-] testnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
 
-- [ ] pin input scriptPubKey `OP_INSPECTINPUTSCRIPTPUBKEY`
+- [-] pin input scriptPubKey `OP_INSPECTINPUTSCRIPTPUBKEY`
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
-  - [ ] testnet
-    - [ ] typescript
+  - [-] testnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
 
-- [ ] pin input sequence `OP_INSPECTINPUTSEQUENCE`
+- [-] pin input sequence `OP_INSPECTINPUTSEQUENCE`
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
-  - [ ] testnet
-    - [ ] typescript
+  - [-] testnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
 
-- [ ] recursive covenant: pin input's arkade script `OP_INSPECTINPUTARKADESCRIPTHASH`
+- [-] pin input's arkade script `OP_INSPECTINPUTARKADESCRIPTHASH`
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
-  - [ ] testnet
-    - [ ] typescript
+  - [-] testnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
 
-- [ ] recursive covenant: pin input's arkade witness `OP_INSPECTINPUTARKADEWITNESSHASH`
+- [-] recursive covenant: pin input's arkade witness `OP_INSPECTINPUTARKADEWITNESSHASH`
   - [ ] mainnet
     - [ ] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
-  - [ ] testnet
-    - [ ] typescript
+  - [-] testnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
@@ -90,8 +90,8 @@
     - [ ] go
     - [ ] rust
     - [ ] .net
-  - [ ] testnet
-    - [ ] typescript
+  - [-] testnet
+    - [x] typescript
     - [ ] go
     - [ ] rust
     - [ ] .net
