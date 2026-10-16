@@ -9,3 +9,4 @@
 *.mmd
 *.svg
 .claude/*
+exit-package.json
