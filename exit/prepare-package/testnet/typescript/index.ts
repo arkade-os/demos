@@ -94,7 +94,19 @@ if (!outputs.length) {
 }
 
 /**
- * 6. Settle preconfirmed outputs (if any)
+ * 6. Refuse asset-bearing outputs
+ * An exit carries BTC value only: the assets on these outputs would be lost
+ */
+const withAssets = outputs.filter((output) => output.assets?.length);
+
+if (withAssets.length) {
+  throw new Error("Unilateral exit carries BTC only: move the assets first", {
+    cause: withAssets.map(({ txid, vout }) => `${txid}:${vout}`),
+  });
+}
+
+/**
+ * 7. Settle preconfirmed outputs (if any)
  *
  * A preconfirmed output's exit path runs through every offchain transaction
  * since its last batch, and those transactions also carry other people's
@@ -108,7 +120,7 @@ if (outputs.some((output) => output.isPreconfirmed)) {
   console.log(`Settled: ${EXPLORER_URL}/commitment-tx/${settlementTxid}`);
 }
 
-/** 7. Describe the exit */
+/** 8. Describe the exit */
 const exitOptions = {
   wallet,
   onchainWallet,
@@ -126,7 +138,7 @@ const exitOptions = {
   mode: "funded",
 } as const satisfies ExitOptions;
 
-/** 8. Estimate cost (signs nothing, spends nothing) */
+/** 9. Estimate cost (signs nothing, spends nothing) */
 const quote = await UnilateralExit.estimate(exitOptions);
 
 console.log("Exit quote:", {
@@ -151,7 +163,7 @@ if (quote.shortfallSats > 0) {
 }
 
 /**
- * 9. Prepare exit package
+ * 10. Prepare exit package
  *
  * Signs every transaction the exit needs, and broadcasts the "splitter",
  * which reserves the onchain fee budget so that later wallet activity
@@ -164,7 +176,7 @@ if (splitter) {
   console.log(`Broadcast fee splitter: ${MEMPOOL_URL}/tx/${splitter.txid}`);
 }
 
-/** 10. Save exit package */
+/** 11. Save exit package */
 writeFileSync(PACKAGE_PATH, serializeExitPackage(exitPackage));
 
 console.log(`Saved exit package to ${PACKAGE_PATH}:`, {
@@ -177,9 +189,16 @@ console.log(`Saved exit package to ${PACKAGE_PATH}:`, {
   validUntil: exitPackage.validUntil
     ? new Date(exitPackage.validUntil * 1000).toISOString()
     : undefined,
+  /**
+   * Outputs the package leaves behind, with the reason
+   * (e.g. worth less than the fee to sweep them)
+   */
+  skipped: exitPackage.vtxos
+    .filter((output) => output.skipped)
+    .map(({ outpoint, skipped }) => `${outpoint}: ${skipped}`),
 });
 
-/** 11. Graceful shutdown */
+/** 12. Graceful shutdown */
 console.log("Disposing wallet...");
 await wallet.dispose();
 

@@ -48,6 +48,9 @@ const executor = new UnilateralExit.Executor(exitPackage, explorer, {
   pollIntervalMs: 10_000,
 });
 
+/** A failed branch doesn't stop the others, so collect failures to report */
+const failures: string[] = [];
+
 for await (const event of executor) {
   const step = `[${event.stepIndex + 1}/${exitPackage.steps.length}] ${event.kind}`;
   const link = event.txid ? `${MEMPOOL_URL}/tx/${event.txid}` : "";
@@ -62,8 +65,11 @@ for await (const event of executor) {
       );
       break;
     case "failed":
+      failures.push(`${step}: ${event.reason}`);
+      console.error(`${step} failed: ${event.reason}`, link);
+      break;
     case "warning":
-      console.warn(`${step} ${event.status}: ${event.reason}`, link);
+      console.warn(`${step} warning: ${event.reason}`, link);
       break;
     default:
       console.log(`${step} ${event.status}`, link);
@@ -74,6 +80,14 @@ for await (const event of executor) {
 const coins = await explorer.getCoins(exitPackage.sweepAddress);
 const total = coins.reduce((sum, coin) => sum + coin.value, 0);
 
-console.log(
-  `Exit complete: ${exitPackage.sweepAddress} holds ${total} sats onchain`,
-);
+if (failures.length) {
+  console.error(
+    `Exit incomplete, ${failures.length} step(s) failed:`,
+    failures,
+  );
+  process.exitCode = 1;
+} else {
+  console.log("Exit complete");
+}
+
+console.log(`${exitPackage.sweepAddress} holds ${total} sats onchain`);

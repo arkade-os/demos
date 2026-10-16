@@ -12,7 +12,10 @@ import {
 import { arkadeLnurl } from "@arkade-os/lnurl-client/arkade";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 
-/** Becomes USERNAME@lnurl.mutinynet.arkade.sh */
+/**
+ * Becomes USERNAME@lnurl.mutinynet.arkade.sh
+ * Owned by the wallet below: with your own seed phrase, pick a free name
+ */
 const USERNAME = "arkade-demos" as const;
 
 /**

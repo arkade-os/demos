@@ -99,16 +99,28 @@ const cash = await wallet.createCash(CASH_AMOUNT).catch((error) => {
   throw error;
 });
 
-/** 6. Decode note */
+/**
+ * 6. Hand over note (before anything else can fail)
+ *
+ * It's a bearer instrument, so treat it like cash: send it privately, and
+ * claim it promptly. Unclaimed past its batch expiry, the operator sweeps it
+ * and it can only be recovered through a settlement.
+ */
+console.log(`\nNote: ${cash}\n`);
+console.log(
+  `Claim it with: (cd ../../../claim/testnet/typescript && pnpm dev ${cash})\n`,
+);
+
+/** 7. Decode note */
 const note = ArkadeCash.fromString(cash);
 
-console.log("Created note:", {
+console.log("Decoded note:", {
   publicKey: hex.encode(note.publicKey),
   address: note.address(NETWORK.hrp).encode(),
   exitTimelock: note.csvTimelock,
 });
 
-/** 7. Find the output the note controls */
+/** 8. Find the output the note controls */
 const { vtxos: outputs } = await wallet.indexerProvider.getVtxos({
   scripts: [hex.encode(note.vtxoScript.pkScript)],
 });
@@ -118,18 +130,6 @@ for (const { txid, vout, value } of outputs) {
     vout,
   });
 }
-
-/**
- * 8. Hand over note
- *
- * It's a bearer instrument, so treat it like cash: send it privately, and
- * claim it promptly. Unclaimed past its batch expiry, the operator sweeps it
- * and it can only be recovered through a settlement.
- */
-console.log(`\nNote: ${cash}\n`);
-console.log(
-  `Claim it with: (cd ../../../claim/testnet/typescript && pnpm dev ${cash})`,
-);
 
 /** 9. Graceful shutdown */
 console.log("Disposing wallet...");
