@@ -1,10 +1,10 @@
-// TODO: broken, needs fixing
-
 import {
   arkade,
+  attachPrevArkTxs,
   buildOffchainTx,
   EmulatorPacket,
   Extension,
+  MnemonicIdentity,
   RestArkProvider,
   RestEmulatorProvider,
   RestIndexerProvider,
@@ -21,16 +21,28 @@ const OUTPUT_INDEX = 0;
 const OUTPUT_AMOUNT = 1_000n;
 
 /**
- * A basic covenant contract program, `payExactAmount`, that only lets the operator move funds
+ * A basic covenant contract program, `payExactAmount`, that only lets the user move funds
  * when output[OUTPUT_INDEX] pays exactly OUTPUT_AMOUNT.
  */
 const program = {
   version: 0,
-  params: ["operatorPubkey", "outputAmount"],
+  params: ["emulatorPubkey", "userPubkey", "operatorPubkey", "outputAmount"],
   functions: {
     payExactAmount: {
-      /** Tapscript-level signer requirement: only the operator key. */
-      tapscript: { signers: ["$operatorPubkey"] },
+      /**
+       * Tapscript-level signers, in signing order: the emulator (its key tweaked by the
+       * covenant), then the user, then the operator. With the user after the emulator,
+       * the emulator only co-signs and hands the tx back, so the user submits it to arkd.
+       * `emulator: null` stops the SDK appending the emulator key a second time.
+       */
+      tapscript: {
+        signers: [
+          { tweak: "$emulatorPubkey", fn: "payExactAmount" },
+          "$userPubkey",
+          "$operatorPubkey",
+        ],
+        emulator: null,
+      },
       /** Covenant clause executed by the emulator on every spend. */
       arkadeScript: {
         asm: [OUTPUT_INDEX, "INSPECTOUTPUTVALUE", "$outputAmount", "EQUAL"],
@@ -39,24 +51,35 @@ const program = {
   },
 } as const satisfies Program;
 
+const SEED_PHRASE =
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
 
-/** 1. Create script builder with support for cosigner, indexer and emulator. */
+/** 1. Create user identity */
+const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
+  isMainnet: false,
+});
+
+/** 2. Create script builder with support for cosigner, indexer and emulator. */
+const operator = new RestArkProvider(OPERATOR_URL);
+const indexer = new RestIndexerProvider(OPERATOR_URL);
 const builder = await ContractBuilder.connect({
-  arkade: new RestArkProvider(OPERATOR_URL),
-  indexer: new RestIndexerProvider(OPERATOR_URL),
+  arkade: operator,
+  indexer,
   emulator: new RestEmulatorProvider(EMULATOR_URL),
 });
 
-/** 2. Instantiate the contract, binding the program's params to concrete values. */
+/** 3. Instantiate the contract, binding the program's params to concrete values. */
 const contract = builder.contract(program, {
+  emulatorPubkey: builder.emulatorKey!,
+  userPubkey: await identity.xOnlyPublicKey(),
   operatorPubkey: builder.serverKey,
   outputAmount: OUTPUT_AMOUNT,
 });
 
-/** 3. Fetch contract inputs and determine whether the contract can be executed. */
+/** 4. Fetch contract inputs and determine whether the contract can be executed. */
 const contractInputs = await contract.getUtxos();
 
 const contractBalance = contractInputs.reduce(
@@ -120,7 +143,7 @@ outputs.push(
   ]).txOut(),
 );
 
-/** 4. Build the unsigned virtual transaction */
+/** 5. Build the unsigned virtual transaction */
 const { arkTx, checkpoints } = buildOffchainTx(
   inputs,
   outputs,
@@ -129,19 +152,42 @@ const { arkTx, checkpoints } = buildOffchainTx(
 );
 
 /**
- * 5. Submit transaction.
- * `payExactAmount` is signed only by the operator (`$operatorPubkey`)
- * No client identity is involved, so the unsigned transaction goes straight to the emulator
+ * 6. Attach the transaction that created each input's coin.
+ * The emulator needs it to introspect the inputs, and rejects the submission without it.
  */
-const submitted = await builder.emulator!.submitTx(
+await attachPrevArkTxs(
+  arkTx,
+  inputs.map(({ txid }) => txid),
+  indexer,
+);
+
+/**
+ * 7. Have the emulator run the covenant and co-sign.
+ * The user signs after it, so it returns the tx instead of submitting it to arkd.
+ */
+const coSigned = await builder.emulator!.submitTx(
   base64.encode(arkTx.toPSBT()),
   checkpoints.map((c) => base64.encode(c.toPSBT())),
 );
 
+/** 8. Add the user's signatures to the ark tx and its checkpoints */
+const signedArkTx = await identity.sign(
+  Transaction.fromPSBT(base64.decode(coSigned.signedArkTx)),
+);
+const signedCheckpoints = await Promise.all(
+  coSigned.signedCheckpointTxs.map((checkpoint) =>
+    identity.sign(Transaction.fromPSBT(base64.decode(checkpoint)), [0]),
+  ),
+);
+
 /**
- * 6. Extract the finalized transaction's ID
+ * 9. Submit to arkd.
+ * The checkpoints arrive fully signed, so arkd finalizes the tx on submit: no finalize call.
  */
-const txid = Transaction.fromPSBT(base64.decode(submitted.signedArkTx)).id;
+const { arkTxid } = await operator.submitTx(
+  base64.encode(signedArkTx.toPSBT()),
+  signedCheckpoints.map((checkpoint) => base64.encode(checkpoint.toPSBT())),
+);
 console.log(
-  `Spent ${inputs.length} contract input(s): ${EXPLORER_URL}/tx/${txid}`,
+  `Spent ${inputs.length} contract input(s): ${EXPLORER_URL}/tx/${arkTxid}`,
 );

@@ -139,11 +139,16 @@ const userSignedSplitCheckpoints = await Promise.all(
   splitCheckpoints.map((checkpoint) => userIdentity.sign(checkpoint)),
 );
 
-/** 16. Submit first tx to server */
+/**
+ * 16. Submit first tx to server
+ * Checkpoints go unsigned, with the user's signatures added at finalization:
+ * arkd v0.9.22+ finalizes on submit when checkpoints arrive already signed,
+ * and the explicit finalize below would then be rejected
+ */
 const { signedCheckpointTxs: serverSignedConsolidationCheckpoints } =
   await operator.submitTx(
     base64.encode(signedConsolidationTx.toPSBT()),
-    userSignedConsolidationCheckpoints.map((tx) => base64.encode(tx.toPSBT())),
+    consolidationCheckpoints.map((tx) => base64.encode(tx.toPSBT())),
   );
 
 /** 17. Merge first checkpoint signatures */
@@ -169,11 +174,11 @@ console.log(
   `Finalized first transaction (consolidation): ${EXPLORER_URL}/tx/${consolidationTx.id}`,
 );
 
-/** 19. Submit second tx to server */
+/** 19. Submit second tx to server (checkpoints unsigned, as in step 16) */
 const { signedCheckpointTxs: serverSignedSplitCheckpoints } =
   await operator.submitTx(
     base64.encode(signedSplitTx.toPSBT()),
-    userSignedSplitCheckpoints.map((tx) => base64.encode(tx.toPSBT())),
+    splitCheckpoints.map((tx) => base64.encode(tx.toPSBT())),
   );
 
 /** 20. Merge second checkpoint signatures */
