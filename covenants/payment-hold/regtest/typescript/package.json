@@ -1,0 +1,28 @@
+{
+  "name": "payment-hold-demo",
+  "private": true,
+  "type": "module",
+  "description": "Authorize-and-capture (gas pump) payment demo on Arkade: covenant hold, merchant capture with change, void, timelocked reclaim. Serverless merchant + customer web views.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "smoke": "node --experimental-strip-types smoke/smoke.ts",
+    "faucet": "node --experimental-strip-types smoke/faucet.ts"
+  },
+  "dependencies": {
+    "@arkade-os/sdk": "^0.4.52",
+    "@scure/base": "^1.2.4",
+    "@scure/btc-signer": "^1.8.0"
+  },
+  "devDependencies": {
+    "@noble/curves": "^2.2.0",
+    "@types/node": "^22.20.1",
+    "eventsource": "^3.0.2",
+    "playwright-core": "^1.62.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  }
+}
