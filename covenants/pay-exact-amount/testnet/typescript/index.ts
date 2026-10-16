@@ -1,5 +1,6 @@
 // NB: the emulator returns "internal error" although the tx goes through: arkd finalizes
-// it on submit, then the emulator's own finalize is rejected for a duplicated checkpoint signature
+// it on submit, then the emulator's own finalize is rejected for a duplicated checkpoint
+// signature (arkade-os/emulator#175)
 
 import {
   arkade,
