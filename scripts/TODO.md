@@ -1,121 +1,55 @@
-- [-] boarding tapscript
-  - [-] mainnet
+- [x] boarding tapscript
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] delegated payment tapscript
-  - [-] mainnet
+- [x] delegated payment tapscript
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] deprecated cosigner tapscripts
-  - [-] mainnet
+- [x] deprecated cosigner tapscripts
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [ ] dryja-poon channel
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] escrow tapscript (buyer + seller agree, dispute resolution via arbiter, timelock buyer refund)
-  - [-] mainnet
+- [x] escrow tapscript (buyer + seller agree, dispute resolution via arbiter, timelock buyer refund)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] multisig tapscript (2-2 alice + bob, including delegate + renewal paths)
-  - [-] mainnet
+- [x] multisig tapscript (2-2 alice + bob, including delegate + renewal paths)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] basic payment tapscript
-  - [-] mainnet
+- [x] basic payment tapscript
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [ ] spilman channel
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] absolute cltv timelock
-  - [-] mainnet
+- [x] absolute cltv timelock
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] virtual hash timelocked contract (VHTLC)
-  - [-] mainnet
+- [x] virtual hash timelocked contract (VHTLC)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [ ] wager with unilateral exits (see [old escrow demo](https://github.com/arkade-os/demos/tree/master/old/escrow/typescript))
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net

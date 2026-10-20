@@ -1,68 +1,32 @@
-- [-] get asset details (including control asset, custom metadata)
-  - [-] mainnet
+- [x] get asset details (including control asset, custom metadata)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [-] outputs by address
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [-] outputs by outpoint
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [-] outputs by script
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] get virtual transactions
-  - [-] mainnet
+- [x] get virtual transactions
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] get virtual transaction output chain
-  - [-] mainnet
+- [x] get virtual transaction output chain
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 
 TODO: add logic for virtual-txs to parse anchors, arbitary OP_RETURNs (UTF-8), subdust script public keys, Arkade extensions (including asset packets)

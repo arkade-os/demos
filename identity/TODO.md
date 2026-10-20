@@ -1,99 +1,45 @@
 - [ ] custom sign function
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] descriptor (readonly)
-  - [-] mainnet
+- [x] descriptor (readonly)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [ ] dummy (readonly)
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] private key (hex)
-  - [-] mainnet
+- [x] private key (hex)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] public key (hex, compressed, readonly)
-  - [-] mainnet
+- [x] public key (hex, compressed, readonly)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] mnemonic
-  - [-] mainnet
+- [x] mnemonic
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] npub (readonly)
-  - [-] mainnet
+- [x] npub (readonly)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] nsec
-  - [-] mainnet
+- [x] nsec
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] seed
-  - [-] mainnet
+- [x] seed
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
