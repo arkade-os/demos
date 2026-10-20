@@ -74,11 +74,11 @@ const outputs = await wallet.getVtxos({
 
 /** 5. Log spendable outputs (map to basic details) */
 console.log(
-  outputs.map(({ txid, vout, value, virtualStatus: { state: status } }) => ({
+  outputs.map(({ txid, vout, value, isPreconfirmed }) => ({
     txid,
     vout,
     value,
-    status,
+    isPreconfirmed,
   })),
 );
 

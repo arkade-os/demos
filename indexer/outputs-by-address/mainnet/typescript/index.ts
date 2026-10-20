@@ -21,10 +21,10 @@ const { vtxos: outputs } = await indexer.getVtxos({
 
 /** 4. Log spendable outputs (map to basic details) */
 console.log(
-  outputs.map(({ txid, vout, value, virtualStatus: { state: status } }) => ({
+  outputs.map(({ txid, vout, value, isPreconfirmed }) => ({
     txid,
     vout,
     value,
-    status,
+    isPreconfirmed,
   })),
 );
