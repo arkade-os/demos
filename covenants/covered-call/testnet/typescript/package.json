@@ -1,0 +1,18 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node index.ts",
+    "oracle": "node index.ts oracle",
+    "daemon": "node index.ts --daemon"
+  },
+  "dependencies": {
+    "@arkade-os/sdk": "^0.4.66",
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1",
+    "@scure/base": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3"
+  }
+}

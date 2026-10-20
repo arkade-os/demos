@@ -1,3 +1,19 @@
+<!-- applications -->
+
+- [-] covered call option: oracle-settled RFQ flow (`OP_CHECKSIGFROMSTACK` 3-of-5 median, `OP_INSPECTOUTPUTVALUE`, `OP_INSPECTOUTPUTSCRIPTPUBKEY`, `OP_INSPECTNUMINPUTS`)
+  - [ ] mainnet
+    - [ ] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+  - [-] testnet
+    - [x] typescript
+    - [ ] go
+    - [ ] rust
+    - [ ] .net
+
+<!-- output introspection -->
+
 - [-] pay to exact amount `OP_INSPECTOUTPUTVALUE`
   - [ ] mainnet
     - [ ] typescript
