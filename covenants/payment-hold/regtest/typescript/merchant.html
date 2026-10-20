@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Merchant terminal — Payment Hold</title>
+    <link rel="stylesheet" href="/src/web/styles.css" />
+  </head>
+  <body>
+    <main>
+      <nav class="topnav"><a href="/">← demo home</a><a href="/customer.html">customer view</a></nav>
+      <h1>🧾 Merchant terminal</h1>
+      <p class="sub">Announce a hold, wait for the tap, then capture what was actually spent.</p>
+
+      <div class="card">
+        <div class="row">
+          <span class="muted">payout address</span>
+          <span id="address" class="mono grow"></span>
+          <span id="addr-copy"></span>
+        </div>
+        <div class="row">
+          <span class="muted">balance</span>
+          <strong id="balance">…</strong>
+          <span class="muted grow">fund via <code class="k" id="faucet-cmd">pnpm faucet …</code></span>
+          <button id="reset" class="ghost">reset demo state</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>New hold</h2>
+        <div class="row">
+          <div class="grow">
+            <label for="amount">hold amount (sats)</label>
+            <input id="amount" type="number" value="50000" min="331" />
+          </div>
+          <div class="grow">
+            <label for="label">label</label>
+            <input id="label" type="text" value="pump #7" />
+          </div>
+          <div>
+            <label for="release">auto-release (blocks)</label>
+            <input id="release" type="number" value="20" min="2" />
+          </div>
+          <button id="announce">Announce</button>
+        </div>
+        <div id="link-row" class="row"></div>
+        <div class="row">
+          <textarea id="receipt" rows="2" placeholder="…or paste a customer receipt here (cross-device)"></textarea>
+          <button id="add-receipt" class="ghost">add receipt</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Holds</h2>
+        <div id="holds"></div>
+      </div>
+
+      <div class="card">
+        <h2>Activity</h2>
+        <div id="log" class="logpane"></div>
+      </div>
+    </main>
+    <script type="module" src="/src/web/merchant.ts"></script>
+  </body>
+</html>
