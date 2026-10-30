@@ -8,6 +8,7 @@ import {
   RestArkProvider,
   RestEmulatorProvider,
   RestIndexerProvider,
+  toXOnly,
   Transaction,
   networks
 } from "@arkade-os/sdk";
@@ -25,8 +26,14 @@ const OUTPUT_AMOUNT = 1_000n;
  * when output[OUTPUT_INDEX] pays exactly OUTPUT_AMOUNT.
  */
 const program = {
-  version: 0,
-  params: ["emulatorPubkey", "userPubkey", "operatorPubkey", "outputAmount"],
+  version: 1,
+  /** Typed constructor params: every `$name` below must be declared here */
+  params: [
+    { name: "emulatorPubkey", type: "pubkey" },
+    { name: "userPubkey", type: "pubkey" },
+    { name: "operatorPubkey", type: "pubkey" },
+    { name: "outputAmount", type: "int" },
+  ],
   functions: {
     payExactAmount: {
       /**
@@ -73,7 +80,8 @@ const builder = await ContractBuilder.connect({
 
 /** 3. Instantiate the contract, binding the program's params to concrete values. */
 const contract = builder.contract(program, {
-  emulatorPubkey: builder.emulatorKey!,
+  /** Typed `pubkey` params are x-only; the emulator reports a compressed key */
+  emulatorPubkey: toXOnly(builder.emulatorKey!),
   userPubkey: await identity.xOnlyPublicKey(),
   operatorPubkey: builder.serverKey,
   outputAmount: OUTPUT_AMOUNT,
