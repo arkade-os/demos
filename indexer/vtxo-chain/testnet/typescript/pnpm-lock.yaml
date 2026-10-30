@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@arkade-os/sdk':
-        specifier: 0.5.0
+        specifier: ^0.5.0
         version: 0.5.0
       '@scure/base':
         specifier: ^2.4.0
