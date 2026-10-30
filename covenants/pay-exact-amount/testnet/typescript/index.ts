@@ -1,147 +1,84 @@
-// TODO: broken, needs fixing
+import { arkade, canSpendOffchain } from "@arkade-os/sdk";
 
-import {
-  arkade,
-  buildOffchainTx,
-  EmulatorPacket,
-  Extension,
-  RestArkProvider,
-  RestEmulatorProvider,
-  RestIndexerProvider,
-  Transaction,
-  networks
-} from "@arkade-os/sdk";
-import { base64 } from "@scure/base";
-
-const { Arkade: ContractBuilder, Script } = arkade;
-type Program = typeof arkade.Program;
+const { Arkade, Script } = arkade;
+// `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
+type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
 const DUST = 330n;
 
-const OUTPUT_INDEX = 0;
 const OUTPUT_AMOUNT = 1_000n;
 
 /**
  * A basic covenant contract program, `payExactAmount`, that only lets the operator move funds
- * when output[OUTPUT_INDEX] pays exactly OUTPUT_AMOUNT.
+ * when output 0 pays exactly OUTPUT_AMOUNT.
  */
 const program = {
-  version: 0,
-  params: ["operatorPubkey", "outputAmount"],
+  version: 1,
+  params: [
+    { name: "operatorPubkey", type: "pubkey" },
+    { name: "outputAmount", type: "int" },
+  ],
   functions: {
     payExactAmount: {
       /** Tapscript-level signer requirement: only the operator key. */
       tapscript: { signers: ["$operatorPubkey"] },
       /** Covenant clause executed by the emulator on every spend. */
       arkadeScript: {
-        asm: [OUTPUT_INDEX, "INSPECTOUTPUTVALUE", "$outputAmount", "EQUAL"],
+        asm: [0, "INSPECTOUTPUTVALUE", "$outputAmount", "EQUAL"],
       },
     },
   },
 } as const satisfies Program;
 
-const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
-const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh" as const;
-const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
+const OPERATOR_URL = "https://mutinynet.arkade.sh";
+const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh";
+const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh";
 
-/** 1. Create script builder with support for cosigner, indexer and emulator. */
-const builder = await ContractBuilder.connect({
-  arkade: new RestArkProvider(OPERATOR_URL),
-  indexer: new RestIndexerProvider(OPERATOR_URL),
-  emulator: new RestEmulatorProvider(EMULATOR_URL),
+/** 1. Connect to the operator and the covenant co-signer (emulator). */
+const ark = await Arkade.connect({
+  service: { operatorUrl: OPERATOR_URL, emulatorUrl: EMULATOR_URL },
 });
 
 /** 2. Instantiate the contract, binding the program's params to concrete values. */
-const contract = builder.contract(program, {
-  operatorPubkey: builder.serverKey,
+const contract = ark.contract(program, {
+  operatorPubkey: ark.serverKey,
   outputAmount: OUTPUT_AMOUNT,
 });
 
-/** 3. Fetch contract inputs and determine whether the contract can be executed. */
-const contractInputs = await contract.getUtxos();
+/**
+ * 3. Fetch every coin at the contract address that can still be spent offchain. An expired or
+ * swept coin has to be renewed instead, and one in the spend would make the operator reject it.
+ */
+const now = { timestamp: new Date() };
+const coins = (await contract.getUtxos()).filter((coin) => canSpendOffchain(coin, now));
+const balance = coins.reduce((total, coin) => total + BigInt(coin.value), 0n);
 
-const contractBalance = contractInputs.reduce(
-  (total, input) => total + BigInt(input.value),
-  0n,
-);
-
-if (contractBalance < OUTPUT_AMOUNT) {
-  throw new Error("Contract address not funded", {
-    cause: {
-      // TODO: temp workaround for contract.address() defaulting to mainnet
-      address: contract.vtxoScript.address(networks.mutinynet.hrp, builder.serverKey).encode(),
-      expected: OUTPUT_AMOUNT,
-      received: contractBalance,
-      need: OUTPUT_AMOUNT - contractBalance,
-    },
-  });
+if (balance < OUTPUT_AMOUNT) {
+  throw new Error(
+    `Fund ${contract.address} with at least ${OUTPUT_AMOUNT - balance} more sats`,
+  );
 }
 
-/** The compiled `payExactAmount` spending path: its tapscript leaf and raw arkadeScript bytes. */
-const payExactAmount = contract.vtxoScript.functionByName("payExactAmount")!;
-
-/** Transform into PSBT inputs, all spent via the same `payExactAmount` leaf. */
-const inputs = contractInputs.map(({ txid, vout, value }) => ({
-  txid,
-  vout,
-  value,
-  /** The tapscript leaf (+ control block) authorizing this spend. */
-  tapLeafScript: payExactAmount.tapLeafScript,
-  /** The contract's encoded taproot script tree. */
-  tapTree: contract.tapTree,
-}));
-
 /**
- * The covenant demands output[OUTPUT_INDEX].value === OUTPUT_AMOUNT exactly,
- * so any surplus from consolidating multiple inputs needs its own output.
+ * 4. Spend all coins in one transaction through `payExactAmount`. The builder writes one
+ * emulator entry per coin. Every coin's covenant checks the same output 0, so the coins
+ * pay OUTPUT_AMOUNT once between them, and the surplus goes back to the contract.
  */
-const outputs = [{ script: contract.pkScript, amount: OUTPUT_AMOUNT }];
-const change = contractBalance - OUTPUT_AMOUNT;
+const spend = contract.functions
+  .payExactAmount()
+  .from(coins)
+  .to(contract.pkScript, OUTPUT_AMOUNT);
 
-/** Only add a change output when there actually is a surplus. */
+const change = balance - OUTPUT_AMOUNT;
 if (change >= DUST) {
-  outputs.push({ script: contract.pkScript, amount: change });
+  spend.change(contract.pkScript);
 } else if (change > 0n) {
-  outputs.push({
-    script: Script.encode(["RETURN", contract.vtxoScript.tweakedPublicKey]),
-    amount: change,
-  });
+  // Change below dust can't be a VTXO, so it goes to an OP_RETURN output.
+  spend.to(Script.encode(["RETURN", contract.vtxoScript.tweakedPublicKey]), change);
 }
 
 /**
- * Construct Arkade extension envelope.
- * The emulator executes `payExactAmount`'s arkadeScript once per covenant input,
- * so we need one packet entry per input index, all pointing at the same script.
+ * 5. Submit. `payExactAmount` is signed only by the operator, so no client identity is
+ * involved: the emulator cosigns and finalizes with the operator.
  */
-outputs.push(
-  Extension.create([
-    EmulatorPacket.create(
-      inputs.map((_, vin) => ({ vin, script: payExactAmount.arkadeScript! })),
-    ),
-  ]).txOut(),
-);
-
-/** 4. Build the unsigned virtual transaction */
-const { arkTx, checkpoints } = buildOffchainTx(
-  inputs,
-  outputs,
-  /** The operator's checkpoint unroll tapscript. */
-  builder.checkpoint,
-);
-
-/**
- * 5. Submit transaction.
- * `payExactAmount` is signed only by the operator (`$operatorPubkey`)
- * No client identity is involved, so the unsigned transaction goes straight to the emulator
- */
-const submitted = await builder.emulator!.submitTx(
-  base64.encode(arkTx.toPSBT()),
-  checkpoints.map((c) => base64.encode(c.toPSBT())),
-);
-
-/**
- * 6. Extract the finalized transaction's ID
- */
-const txid = Transaction.fromPSBT(base64.decode(submitted.signedArkTx)).id;
-console.log(
-  `Spent ${inputs.length} contract input(s): ${EXPLORER_URL}/tx/${txid}`,
-);
+const { txid } = await spend.send();
+console.log(`Spent ${coins.length} contract coin(s): ${EXPLORER_URL}/tx/${txid}`);
