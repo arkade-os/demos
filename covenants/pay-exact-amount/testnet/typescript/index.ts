@@ -47,9 +47,12 @@ const contract = ark.contract(program, {
 /**
  * 3. Fetch every coin at the contract address that can still be spent offchain. An expired or
  * swept coin has to be renewed instead, and one in the spend would make the operator reject it.
+ * Anyone can send an asset coin here too; this spend routes no assets, so it leaves those out.
  */
 const now = { timestamp: new Date() };
-const coins = (await contract.getUtxos()).filter((coin) => canSpendOffchain(coin, now));
+const coins = (await contract.getUtxos()).filter(
+  (coin) => canSpendOffchain(coin, now) && !coin.assets?.length,
+);
 const balance = coins.reduce((total, coin) => total + BigInt(coin.value), 0n);
 
 if (balance < OUTPUT_AMOUNT) {
