@@ -108,7 +108,7 @@ const cash = await wallet.createCash(CASH_AMOUNT).catch((error) => {
  */
 console.log(`\nNote: ${cash}\n`);
 console.log(
-  `Claim it with: (cd ../../../claim/testnet/typescript && pnpm dev ${cash})\n`,
+  `Claim it with: (cd ../../../claim/testnet/typescript && pnpm install && pnpm dev ${cash})\n`,
 );
 
 /** 7. Decode note */
