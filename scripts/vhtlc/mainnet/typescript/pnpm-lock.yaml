@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@arkade-os/sdk':
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.5.1
+        version: 0.5.1
       '@noble/hashes':
         specifier: ^2.4.0
         version: 2.4.0
@@ -27,8 +27,8 @@ importers:
 
 packages:
 
-  '@arkade-os/sdk@0.5.0':
-    resolution: {integrity: sha512-AIXzsJB0CWZ1zzWOrpeDBJq8cTpBHZ0nDgDALS7qXkUrCWPQ0x8XHBIwoPdWwTKd9Kv87ZYpcSFvsGu3ju2IlQ==}
+  '@arkade-os/sdk@0.5.1':
+    resolution: {integrity: sha512-7oN45PXB8TuvI2POJ/CLwx0ZJDree0V5OBdr3//MWCbkpkVvJfZEsKJSws1+DiwSEmrHFTCYh4xz0vfoWXxKrg==}
     engines: {node: '>=22.13.0 <27'}
     peerDependencies:
       '@react-native-async-storage/async-storage': '>=1.0.0'
@@ -297,7 +297,7 @@ packages:
 
 snapshots:
 
-  '@arkade-os/sdk@0.5.0':
+  '@arkade-os/sdk@0.5.1':
     dependencies:
       '@bitcoinerlab/descriptors-scure': 3.1.7
       '@marcbachmann/cel-js': 8.0.0

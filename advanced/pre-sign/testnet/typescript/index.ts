@@ -174,6 +174,12 @@ console.log(
   `Finalized first transaction (consolidation): ${EXPLORER_URL}/tx/${consolidationTx.id}`,
 );
 
+/**
+ * Give arkd a moment to register the output the second tx spends:
+ * submitted straight away, it is sometimes refused as VTXO_NOT_FOUND
+ */
+await new Promise((resolve) => setTimeout(resolve, 1000));
+
 /** 19. Submit second tx to server (checkpoints unsigned, as in step 16) */
 const { signedCheckpointTxs: serverSignedSplitCheckpoints } =
   await operator.submitTx(
