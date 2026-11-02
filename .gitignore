@@ -3,6 +3,8 @@
 **/rust/target/*
 **/rust/Cargo.lock
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
 *.DS_Store
 *.mmd
 *.svg
