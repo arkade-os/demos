@@ -3,25 +3,27 @@ import {
   EsploraProvider,
   UnilateralExit,
 } from "@arkade-os/sdk";
-import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
 /**
  * Written by the prepare-package demo
  * The package holds only pre-signed transactions, no keys
+ * The path is relative to this folder: run the demo with `pnpm dev`
  */
 const PACKAGE_PATH =
   "../../../prepare-package/testnet/typescript/exit-package.json" as const;
 const ESPLORA_URL = "https://mempool.mutinynet.arkade.sh/api" as const;
 const MEMPOOL_URL = "https://mutinynet.com" as const;
 
-/** 1. Load exit package */
-if (!existsSync(PACKAGE_PATH)) {
-  throw new Error("No exit package found, run the prepare-package demo first", {
-    cause: PACKAGE_PATH,
+/** 1. Load exit package (missing or corrupt: prepare a new one) */
+const exitPackage = await readFile(PACKAGE_PATH, "utf8")
+  .then(deserializeExitPackage)
+  .catch((cause) => {
+    throw new Error(
+      "No valid exit package found, run the prepare-package demo first",
+      { cause },
+    );
   });
-}
-
-const exitPackage = deserializeExitPackage(readFileSync(PACKAGE_PATH, "utf8"));
 
 console.log("Loaded exit package:", {
   network: exitPackage.network,

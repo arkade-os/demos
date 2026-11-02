@@ -176,7 +176,11 @@ if (splitter) {
   console.log(`Broadcast fee splitter: ${MEMPOOL_URL}/tx/${splitter.txid}`);
 }
 
-/** 11. Save exit package */
+/**
+ * 11. Save exit package
+ * The splitter is already broadcast: if this write fails, run the demo again.
+ * The splitter paid this wallet's own address, so only its fee is lost.
+ */
 writeFileSync(PACKAGE_PATH, serializeExitPackage(exitPackage));
 
 console.log(`Saved exit package to ${PACKAGE_PATH}:`, {
