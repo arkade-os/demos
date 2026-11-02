@@ -105,17 +105,25 @@ console.log(`LNURL: ${receiver.lnurl}`);
 const { paymentOptions, minSendable, maxSendable } =
   await receiver.payRequest();
 
-console.log("Payment options:", {
-  options: paymentOptions?.map(({ id }) => id),
-  minSats: minSendable / 1000,
-  maxSats: maxSendable / 1000,
-});
+console.log(
+  "Payment options:",
+  paymentOptions?.map((option) => ({
+    id: option.id,
+    /** An option can set its own limits, else the address's apply */
+    minSats: (option.minSendable ?? minSendable) / 1000,
+    maxSats: (option.maxSendable ?? maxSendable) / 1000,
+  })),
+);
 
-/** 7. Show payments received so far (recorded by the server) */
+/**
+ * 7. Show payments received so far (recorded by the server)
+ * One page holds the 50 least recently changed records:
+ * pass `since: nextSince` to fetch the next page
+ */
 const { payments } = await receiver.payments();
 
 console.log(
-  "Settled payments:",
+  "Settled payments (first page):",
   payments
     .filter((payment) => payment.settled)
     .map((payment) => ({
