@@ -1,45 +1,48 @@
 import {
+  Arkade,
   arkade,
-  ArkAddress,
-  buildOffchainTx,
-  setArkPsbtField,
-  getNetwork,
-  PrevArkTxField,
-  EmulatorPacket,
-  Extension,
-  InMemoryContractRepository,
-  InMemoryWalletRepository,
-  SeedIdentity,
-  RestArkProvider,
-  RestEmulatorProvider,
-  RestIndexerProvider,
-  Transaction,
-  Wallet,
+  canSpendOffchain,
+  MnemonicIdentity,
 } from "@arkade-os/sdk";
-import { base64, hex } from "@scure/base";
-import { EventSource } from "eventsource";
+import { hex } from "@scure/base";
 
-const { Arkade: ContractBuilder } = arkade;
-type Program = typeof arkade.Program;
+// `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
+type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
 
-const DEPOSIT_AMOUNT = 1000;
-const PINNED_INPUT_INDEX = 0;
+/** A plain contract for coin A: the user and the operator sign, and no covenant applies. */
+const ownedProgram = {
+  version: 1,
+  /** Typed constructor params: every `$name` below must be declared here */
+  params: [
+    { name: "userPubkey", type: "pubkey" },
+    { name: "operatorPubkey", type: "pubkey" },
+  ],
+  functions: {
+    spend: { tapscript: { signers: ["$userPubkey", "$operatorPubkey"] } },
+  },
+} as const satisfies Program;
 
 /**
- * A basic covenant contract program, `pinInput`, that only lets the operator move funds
- * when the coin at input[PINNED_INPUT_INDEX] spends one exact, pre-chosen outpoint.
+ * A covenant, `pinInput`, that only lets the user move funds when input 0 spends one exact
+ * outpoint, chosen before the guard is funded.
  */
-const program = {
-  version: 0,
-  params: ["operatorPubkey", "pinnedTxid", "pinnedVout"],
+const guardProgram = {
+  version: 1,
+  /** Typed constructor params: every `$name` below must be declared here */
+  params: [
+    { name: "userPubkey", type: "pubkey" },
+    { name: "operatorPubkey", type: "pubkey" },
+    { name: "pinnedTxid", type: "bytes32" },
+    { name: "pinnedVout", type: "int" },
+  ],
   functions: {
     pinInput: {
-      /** Tapscript-level signer requirement: only the operator key. */
-      tapscript: { signers: ["$operatorPubkey"] },
-      /** Covenant clause executed by the emulator on every spend. */
+      /** Tapscript-level signers: the user and the operator. */
+      tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
+      /** Covenant clause the operator runs on every spend, before it cosigns. */
       arkadeScript: {
         asm: [
-          PINNED_INPUT_INDEX,
+          0,
           "INSPECTINPUTOUTPOINT",
           "$pinnedVout",
           "EQUALVERIFY",
@@ -51,173 +54,77 @@ const program = {
   },
 } as const satisfies Program;
 
+const SEED_PHRASE =
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
-const FAUCET_URL = "https://faucet.mutinynet.arkade.sh/faucet" as const;
 
-/** The wallet uses server sent events, so give Node a global EventSource. */
-(globalThis as any).EventSource = EventSource;
-
-/** 1. Create a wallet to own coin A, and a builder with cosigner, indexer and emulator. */
-/** Fresh random identity per run, so this run's coin A is isolated from other runs on the demo. */
-const identity = SeedIdentity.fromSeed(crypto.getRandomValues(new Uint8Array(64)), { isMainnet: false });
-const operator = new RestArkProvider(OPERATOR_URL);
-const indexer = new RestIndexerProvider(OPERATOR_URL);
-const emulator = new RestEmulatorProvider(EMULATOR_URL);
-const network = getNetwork("mutinynet");
-
-const wallet = await Wallet.create({
-  identity,
-  arkProvider: operator,
-  indexerProvider: indexer,
-  settlementConfig: false,
-  storage: {
-    walletRepository: new InMemoryWalletRepository(),
-    contractRepository: new InMemoryContractRepository(),
-  },
+/** 1. Create user identity */
+const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
+  isMainnet: false,
 });
 
-const builder = await ContractBuilder.connect({
+/** 2. Connect to the operator. `emulatorUrl` is where it runs covenant scripts. */
+const ark = await Arkade.connect({
+  service: { operatorUrl: OPERATOR_URL, emulatorUrl: EMULATOR_URL },
   identity,
-  arkade: operator,
-  indexer,
-  emulator,
-  network,
 });
 
-/** 2. Fund coin A first, then derive the checkpoint outpoint the covenant will actually see. */
-const walletAddress = await wallet.getAddress();
-const walletPkScript = ArkAddress.decode(walletAddress).pkScript;
-await fundViaFaucet(walletAddress, DEPOSIT_AMOUNT);
-const [coinA] = await waitFor(() => wallet.getVtxos(), "coin A funding from the faucet");
-
-/** Coin A is a plain wallet coin, spent via its collaborative (forfeit) leaf. */
-const coinAInput = {
-  ...coinA,
-  tapLeafScript: coinA.forfeitTapLeafScript,
+/** 3. Instantiate the plain contract, then fetch two coins without assets from it. */
+const keys = {
+  userPubkey: await identity.xOnlyPublicKey(),
+  operatorPubkey: ark.serverKey,
 };
+const owned = ark.contract(ownedProgram, keys);
 
-/**
- * Input 0 is coin A's checkpoint, not coin A, so INSPECTINPUTOUTPOINT sees the checkpoint
- * outpoint. It is deterministic from coin A, so build it here (throwaway outputs) and pin to it.
- */
-const { checkpoints: [coinACheckpoint] } = buildOffchainTx(
-  [coinAInput],
-  [{ script: walletPkScript, amount: BigInt(coinA.value) }],
-  builder.checkpoint,
+const now = { timestamp: new Date() };
+const coins = (await owned.getUtxos()).filter(
+  (coin) => canSpendOffchain(coin, now) && !coin.assets?.length,
 );
 
-/** 3. Instantiate the contract pinned to that checkpoint outpoint, then fund and fetch the guard. */
-const contract = builder.contract(program, {
-  operatorPubkey: builder.serverKey,
-  /** The covenant reads the txid in internal (reversed) byte order, not display order. */
-  pinnedTxid: hex.decode(coinACheckpoint.id).reverse(),
-  /** Checkpoint outputs always sit at vout 0. */
+if (coins.length < 2) {
+  throw new Error(`Send two payments to ${owned.address}`);
+}
+const [coinA, guardFunds] = coins;
+
+/**
+ * 4. Find the outpoint to pin. Input 0 of an Arkade transaction spends the checkpoint of a coin,
+ * not the coin, so INSPECTINPUTOUTPOINT sees the checkpoint. The checkpoint commits only to the
+ * coin, its spending path and the operator's checkpoint script. The other inputs and outputs of
+ * the spend cannot change it, so a trial build gives the final txid.
+ */
+const { checkpoints } = await owned.functions
+  .spend()
+  .from(coinA)
+  .to(owned.pkScript, BigInt(coinA.value))
+  .build();
+
+/** 5. Instantiate the guard. The covenant reads the txid in internal (reversed) byte order. */
+const guard = ark.contract(guardProgram, {
+  ...keys,
+  pinnedTxid: hex.decode(checkpoints[0].id).reverse(),
+  /** A checkpoint has one output. */
   pinnedVout: 0,
 });
 
-await fundViaFaucet(contract.address, DEPOSIT_AMOUNT);
-const [guardCoin] = await waitFor(() => contract.getUtxos(), "guard funding from the faucet");
-
-/** The compiled `pinInput` spending path: its tapscript leaf and raw arkadeScript bytes. */
-const pinInput = contract.vtxoScript.functionByName("pinInput")!;
-
-/** Two PSBT inputs: coin A at index 0 (the inspected coin) and the guard at index 1. */
-const inputs = [
-  coinAInput,
-  {
-    txid: guardCoin.txid,
-    vout: guardCoin.vout,
-    value: guardCoin.value,
-    /** The guard is spent via the pinInput covenant leaf. */
-    tapLeafScript: pinInput.tapLeafScript,
-    /** The contract's encoded taproot script tree. */
-    tapTree: contract.tapTree,
-  },
-];
-
-/** No output rule here, so the whole value goes back to the wallet in one output. */
-const totalValue = BigInt(coinA.value) + BigInt(guardCoin.value);
-const outputs = [{ script: walletPkScript, amount: totalValue }];
+/** 6. Fund the guard from the second coin. */
+const funding = await owned.functions
+  .spend()
+  .from(guardFunds)
+  .to(guard.pkScript, BigInt(guardFunds.value))
+  .send();
+const guardCoin = { txid: funding.txid, vout: 0, value: guardFunds.value };
 
 /**
- * Construct Arkade extension envelope.
- * Only the guard carries a covenant, so there is a single packet entry for its
- * input index; coin A is a plain coin and gets none.
+ * 7. Spend coin A as input 0 and the guard as input 1. Pay both amounts back to the plain
+ * contract, so the demo can run again.
  */
-outputs.push(
-  Extension.create([
-    EmulatorPacket.create([{ vin: 1, script: pinInput.arkadeScript! }]),
-  ]).txOut(),
-);
-
-/** 4. Build the unsigned virtual transaction */
-const { arkTx, checkpoints } = buildOffchainTx(
-  inputs,
-  outputs,
-  /** The operator's checkpoint unroll tapscript. */
-  builder.checkpoint,
-);
-
-/** Attach each input's source transaction as its PrevArkTxField, which the emulator requires. */
-for (let i = 0; i < inputs.length; i++) {
-  const { txs } = await indexer.getVirtualTxs([inputs[i].txid]);
-  if (!txs[0]) {
-    throw new Error(`indexer returned no virtual tx for input txid ${inputs[i].txid}`);
-  }
-  const sourceTx = Transaction.fromPSBT(base64.decode(txs[0])).unsignedTx;
-  setArkPsbtField(arkTx, i, PrevArkTxField, sourceTx);
-}
-
-/**
- * 5. Submit transaction.
- * Coin A is ours, so we sign both its ark tx input and its checkpoint; the
- * emulator co-signs the guard and checks the covenant before the tx goes through.
- */
-const signedArkTx = await identity.sign(arkTx, [PINNED_INPUT_INDEX]);
-const signedCheckpoints = await Promise.all(checkpoints.map((c) => identity.sign(c)));
-const submitted = await emulator.submitTx(
-  base64.encode(signedArkTx.toPSBT()),
-  signedCheckpoints.map((c) => base64.encode(c.toPSBT())),
-);
-
-/**
- * 6. Extract the finalized transaction's ID
- */
-const txid = Transaction.fromPSBT(base64.decode(submitted.signedArkTx)).id;
-console.log(
-  `Covenant satisfied: input 0 (coin A's checkpoint) matched the pinned outpoint, spent ${inputs.length} input(s): ${EXPLORER_URL}/tx/${txid}`,
-);
-
-await wallet.dispose();
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Ask the Arkade faucet to fund an ark address directly (offchain). */
-async function fundViaFaucet(address: string, amount: number): Promise<void> {
-  const res = await fetch(FAUCET_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ address, amount }),
-  });
-  if (!res.ok) throw new Error(`faucet failed: ${res.status} ${await res.text()}`);
-}
-
-/** Poll until a lookup returns at least one item, or time out. */
-async function waitFor<T>(
-  lookup: () => Promise<T[]>,
-  label: string,
-  timeoutMs = 60_000,
-): Promise<T[]> {
-  console.log(`Waiting for ${label}...`);
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const items = await lookup();
-    if (items.length > 0) return items;
-    await sleep(3_000);
-  }
-  throw new Error(`timed out waiting for ${label}`);
-}
+const { txid } = await guard.functions
+  .pinInput()
+  .from(coinA, owned.unlock.spend())
+  .from(guardCoin)
+  .to(owned.pkScript, BigInt(coinA.value))
+  .to(owned.pkScript, BigInt(guardFunds.value))
+  .send();
+console.log(`Input 0 spent the pinned outpoint: ${EXPLORER_URL}/tx/${txid}`);

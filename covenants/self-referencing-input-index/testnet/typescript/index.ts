@@ -1,40 +1,33 @@
 import {
+  Arkade,
   arkade,
-  buildOffchainTx,
-  setArkPsbtField,
-  getNetwork,
-  PrevArkTxField,
-  EmulatorPacket,
-  Extension,
-  RestArkProvider,
-  RestEmulatorProvider,
-  RestIndexerProvider,
-  SingleKey,
-  Transaction,
+  canSpendOffchain,
+  MnemonicIdentity,
 } from "@arkade-os/sdk";
-import { base64 } from "@scure/base";
 
-const { Arkade: ContractBuilder } = arkade;
-type Program = typeof arkade.Program;
+// `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
+type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
 
 const MIN_AMOUNT = 1_000n;
-const DEPOSIT_AMOUNT = 1_000n;
-const REQUIRED_COINS = 2;
 
 /**
- * A covenant program, `selfReferencingInputIndex`, that only lets the operator move funds when the
- * coin it is currently guarding is worth at least MIN_AMOUNT. It reads its OWN input index with
- * PUSHCURRENTINPUTINDEX instead of a hardcoded number, so one rule correctly guards a coin at any
- * position in the input list.
+ * A covenant, `selfReferencingInputIndex`, that only lets the user move funds when the coin it
+ * guards is worth at least MIN_AMOUNT. It reads its own input index with PUSHCURRENTINPUTINDEX
+ * instead of a fixed number, so one rule guards a coin at any position in the input list.
  */
 const program = {
-  version: 0,
-  params: ["operatorPubkey", "ownerPubkey", "minAmount"],
+  version: 1,
+  /** Typed constructor params: every `$name` below must be declared here */
+  params: [
+    { name: "userPubkey", type: "pubkey" },
+    { name: "operatorPubkey", type: "pubkey" },
+    { name: "minAmount", type: "int" },
+  ],
   functions: {
     selfReferencingInputIndex: {
-      /** Signers: the operator plus a fresh per-run key, which makes this contract address unique per run. */
-      tapscript: { signers: ["$operatorPubkey", "$ownerPubkey"] },
-      /** Covenant clause: my own input's value must be at least minAmount. */
+      /** Tapscript-level signers: the user and the operator. */
+      tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
+      /** Covenant clause the operator runs on every spend, before it cosigns. */
       arkadeScript: {
         asm: ["PUSHCURRENTINPUTINDEX", "INSPECTINPUTVALUE", "$minAmount", "GREATERTHANOREQUAL"],
       },
@@ -42,149 +35,52 @@ const program = {
   },
 } as const satisfies Program;
 
+const SEED_PHRASE =
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
-const FAUCET_URL = "https://faucet.mutinynet.arkade.sh/faucet" as const;
 
-/** 1. Create script builder with support for cosigner, indexer and emulator. */
-const operator = new RestArkProvider(OPERATOR_URL);
-const indexer = new RestIndexerProvider(OPERATOR_URL);
-const emulator = new RestEmulatorProvider(EMULATOR_URL);
-const network = getNetwork("mutinynet");
-
-const builder = await ContractBuilder.connect({
-  arkade: operator,
-  indexer,
-  emulator,
-  network,
+/** 1. Create user identity */
+const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
+  isMainnet: false,
 });
 
-/** A fresh per-run key. Adding it as a signer makes this contract address unique to this run,
- *  so concurrent runs get separate addresses and never touch each other's coins. */
-const identity = SingleKey.fromPrivateKey(crypto.getRandomValues(new Uint8Array(32)));
-const ownerPubkey = await identity.xOnlyPublicKey();
+/** 2. Connect to the operator. `emulatorUrl` is where it runs covenant scripts. */
+const ark = await Arkade.connect({
+  service: { operatorUrl: OPERATOR_URL, emulatorUrl: EMULATOR_URL },
+  identity,
+});
 
-/** 2. Instantiate the contract, binding the program's params to concrete values. */
-const contract = builder.contract(program, {
-  operatorPubkey: builder.serverKey,
-  ownerPubkey,
+/** 3. Instantiate the contract, binding the program's params to concrete values. */
+const contract = ark.contract(program, {
+  userPubkey: await identity.xOnlyPublicKey(),
+  operatorPubkey: ark.serverKey,
   minAmount: MIN_AMOUNT,
 });
 
-/**
- * The whole point is that ONE covenant guards coins at different input positions, so we spend two
- * coins from the contract. Fund it twice so the demo runs end to end without a separate manual step.
- */
-await fundViaFaucet(contract.address, Number(DEPOSIT_AMOUNT));
-await fundViaFaucet(contract.address, Number(DEPOSIT_AMOUNT));
+/** 4. Fetch two coins without assets that clear the minimum and can be spent offchain. */
+const now = { timestamp: new Date() };
+const coins = (await contract.getUtxos())
+  .filter(
+    (coin) =>
+      canSpendOffchain(coin, now) &&
+      !coin.assets?.length &&
+      BigInt(coin.value) >= MIN_AMOUNT,
+  )
+  .slice(0, 2);
 
-/** 3. Wait until both coins land, then spend them together. */
-const contractInputs = await waitFor(async () => {
-  const utxos = await contract.getUtxos();
-  return utxos.length >= REQUIRED_COINS ? utxos.slice(0, REQUIRED_COINS) : [];
-}, `${REQUIRED_COINS} coins from the faucet`);
-
-const contractBalance = contractInputs.reduce(
-  (total, input) => total + BigInt(input.value),
-  0n,
-);
-
-/** The compiled `selfReferencingInputIndex` spending path: its tapscript leaf and raw arkadeScript bytes. */
-const selfReferencingInputIndex = contract.vtxoScript.functionByName("selfReferencingInputIndex")!;
-
-/** Transform into PSBT inputs, all spent via the same leaf. Each will self-check its own value. */
-const inputs = contractInputs.map(({ txid, vout, value }) => ({
-  txid,
-  vout,
-  value,
-  /** The tapscript leaf (+ control block) authorizing this spend. */
-  tapLeafScript: selfReferencingInputIndex.tapLeafScript,
-  /** The contract's encoded taproot script tree. */
-  tapTree: contract.tapTree,
-}));
-
-/** This covenant constrains inputs, not any output, so the whole balance goes back to the contract. */
-const outputs = [{ script: contract.pkScript, amount: contractBalance }];
-
-/**
- * Construct Arkade extension envelope.
- * The emulator runs the arkadeScript once per covenant input, and PUSHCURRENTINPUTINDEX makes each
- * run inspect the input it is attached to, so we need one packet entry per input index.
- */
-outputs.push(
-  Extension.create([
-    EmulatorPacket.create(
-      inputs.map((_, vin) => ({ vin, script: selfReferencingInputIndex.arkadeScript! })),
-    ),
-  ]).txOut(),
-);
-
-/** 4. Build the unsigned virtual transaction */
-const { arkTx, checkpoints } = buildOffchainTx(
-  inputs,
-  outputs,
-  /** The operator's checkpoint unroll tapscript. */
-  builder.checkpoint,
-);
-
-/** Attach each input's source transaction as its PrevArkTxField, which the emulator requires. */
-for (let i = 0; i < inputs.length; i++) {
-  const { txs } = await indexer.getVirtualTxs([inputs[i].txid]);
-  if (!txs[0]) {
-    throw new Error(`indexer returned no virtual tx for input txid ${inputs[i].txid}`);
-  }
-  const sourceTx = Transaction.fromPSBT(base64.decode(txs[0])).unsignedTx;
-  setArkPsbtField(arkTx, i, PrevArkTxField, sourceTx);
+if (coins.length < 2) {
+  throw new Error(`Send two payments of at least ${MIN_AMOUNT} sats to ${contract.address}`);
 }
 
 /**
- * 5. Sign with our per-run key, then submit.
- * The covenant leaf needs the operator (arkd), the emulator (covenant), and our per-run key,
- * so we sign every input and every checkpoint before handing it to the emulator.
+ * 5. Spend both coins through the same path. The operator runs the covenant once per input, and
+ * each run checks its own coin. Pay each amount back to the contract, so the demo can run again.
  */
-const inputIndexes = inputs.map((_, i) => i);
-const signedArkTx = await identity.sign(arkTx, inputIndexes);
-const signedCheckpoints = await Promise.all(checkpoints.map((c) => identity.sign(c)));
-const submitted = await builder.emulator!.submitTx(
-  base64.encode(signedArkTx.toPSBT()),
-  signedCheckpoints.map((c) => base64.encode(c.toPSBT())),
-);
-
-/**
- * 6. Extract the finalized transaction's ID
- */
-const txid = Transaction.fromPSBT(base64.decode(submitted.signedArkTx)).id;
-console.log(
-  `Covenant satisfied: each input self-checked its own value >= ${MIN_AMOUNT} sats, spent ${inputs.length} input(s): ${EXPLORER_URL}/tx/${txid}`,
-);
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Ask the Arkade faucet to fund an ark address directly (offchain). */
-async function fundViaFaucet(address: string, amount: number): Promise<void> {
-  const res = await fetch(FAUCET_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ address, amount }),
-  });
-  if (!res.ok) throw new Error(`faucet failed: ${res.status} ${await res.text()}`);
-}
-
-/** Poll until a lookup returns at least one item, or time out. */
-async function waitFor<T>(
-  lookup: () => Promise<T[]>,
-  label: string,
-  timeoutMs = 60_000,
-): Promise<T[]> {
-  console.log(`Waiting for ${label}...`);
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const items = await lookup();
-    if (items.length > 0) return items;
-    await sleep(3_000);
-  }
-  throw new Error(`timed out waiting for ${label}`);
-}
+const { txid } = await contract.functions
+  .selfReferencingInputIndex()
+  .from(coins)
+  .to(coins.map((coin) => ({ script: contract.pkScript, amount: BigInt(coin.value) })))
+  .send();
+console.log(`Each input checked its own value: ${EXPLORER_URL}/tx/${txid}`);

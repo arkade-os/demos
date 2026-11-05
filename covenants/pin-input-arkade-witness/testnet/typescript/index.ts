@@ -1,229 +1,98 @@
 import {
+  Arkade,
   arkade,
-  buildOffchainTx,
-  setArkPsbtField,
-  getNetwork,
-  PrevArkTxField,
-  EmulatorPacket,
-  Extension,
-  RestArkProvider,
-  RestEmulatorProvider,
-  RestIndexerProvider,
-  SingleKey,
-  Transaction,
+  canSpendOffchain,
+  MnemonicIdentity,
 } from "@arkade-os/sdk";
-import { base64 } from "@scure/base";
+import { RawWitness } from "@scure/btc-signer";
 
-const { Arkade: ContractBuilder } = arkade;
-type Program = typeof arkade.Program;
+// `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
+type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
 
-const DEPOSIT_AMOUNT = 1_000n;
-const REQUIRED_COINS = 2;
-
-/** The hashlock secret. Real ones are random and kept private; the demo commits to sha256(preimage). */
+/** The hashlock secret. A real one is random and private. */
 const PREIMAGE = new TextEncoder().encode("open-sesame");
-/** sha256(preimage): the value the hashlock coin commits to (its $hash). */
 const HASH = new Uint8Array(await crypto.subtle.digest("SHA-256", PREIMAGE));
-/** The hashlock coin's Arkade-level witness, wire-encoded exactly as the emulator hashes it. */
-const WITNESS = encodeWitness([PREIMAGE]);
-/** The witness hash the pinning covenant demands: what INSPECTINPUTARKADEWITNESSHASH(0) will read. */
-const EXPECTED_WITNESS_HASH = arkade.arkadeWitnessHash(WITNESS);
+/** The hash the covenant pins. `RawWitness` is the encoding the SDK puts in the spend. */
+const WITNESS_HASH = arkade.arkadeWitnessHash(RawWitness.encode([PREIMAGE]));
 
 /**
  * One contract with two spending paths:
- *  - `hashlock` spends a coin by revealing a preimage (its Arkade witness), so that coin has a
- *    non-empty witness for the next path to inspect.
- *  - `pinInputArkadeWitness` only lets the operator move funds when input 0's Arkade witness hash
- *    equals the pinned value, i.e. input 0 was unlocked with exactly this preimage.
+ *  - `hashlock` spends a coin by revealing the preimage in its Arkade witness.
+ *  - `pinInputArkadeWitness` only lets the user move funds when the Arkade witness of input 0
+ *    hashes to the pinned value, so input 0 must reveal exactly this preimage.
  */
 const program = {
-  version: 0,
-  params: ["operatorPubkey", "ownerPubkey", "hash", "expectedWitnessHash"],
+  version: 1,
+  /** Typed constructor params: every `$name` below must be declared here */
+  params: [
+    { name: "userPubkey", type: "pubkey" },
+    { name: "operatorPubkey", type: "pubkey" },
+    { name: "hash", type: "bytes32" },
+    { name: "witnessHash", type: "bytes32" },
+  ],
   functions: {
     hashlock: {
-      /** Signers: the operator plus a fresh per-run key, which makes this contract address unique per run. */
-      tapscript: { signers: ["$operatorPubkey", "$ownerPubkey"] },
-      /** Consumes the preimage from its witness: sha256(preimage) must equal the committed hash. */
-      arkadeScript: { asm: ["SHA256", "$hash", "EQUAL"] },
+      inputs: [{ name: "preimage", type: "bytes" }],
+      /** Tapscript-level signers: the user and the operator. */
+      tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
+      /** Consumes the preimage from its witness: its SHA-256 must equal the committed hash. */
+      arkadeScript: { asm: ["SHA256", "$hash", "EQUAL"], witness: ["preimage"] },
     },
     pinInputArkadeWitness: {
-      /** Signers: the operator plus a fresh per-run key, which makes this contract address unique per run. */
-      tapscript: { signers: ["$operatorPubkey", "$ownerPubkey"] },
-      /** Reads input 0's Arkade witness hash and requires it to match the pinned value. */
+      /** Tapscript-level signers: the user and the operator. */
+      tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
+      /** Reads the witness hash of input 0 and requires it to match the pinned value. */
       arkadeScript: {
-        asm: [0, "INSPECTINPUTARKADEWITNESSHASH", "$expectedWitnessHash", "EQUAL"],
+        asm: [0, "INSPECTINPUTARKADEWITNESSHASH", "$witnessHash", "EQUAL"],
       },
     },
   },
 } as const satisfies Program;
 
+const SEED_PHRASE =
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
 const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
 const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh" as const;
 const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
-const FAUCET_URL = "https://faucet.mutinynet.arkade.sh/faucet" as const;
 
-/** 1. Create script builder with support for cosigner, indexer and emulator. */
-const operator = new RestArkProvider(OPERATOR_URL);
-const indexer = new RestIndexerProvider(OPERATOR_URL);
-const emulator = new RestEmulatorProvider(EMULATOR_URL);
-const network = getNetwork("mutinynet");
-
-const builder = await ContractBuilder.connect({
-  arkade: operator,
-  indexer,
-  emulator,
-  network,
+/** 1. Create user identity */
+const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
+  isMainnet: false,
 });
 
-/** A fresh per-run key. Adding it as a signer makes this contract address unique to this run,
- *  so concurrent runs get separate addresses and never touch each other's coins. */
-const identity = SingleKey.fromPrivateKey(crypto.getRandomValues(new Uint8Array(32)));
-const ownerPubkey = await identity.xOnlyPublicKey();
+/** 2. Connect to the operator. `emulatorUrl` is where it runs covenant scripts. */
+const ark = await Arkade.connect({
+  service: { operatorUrl: OPERATOR_URL, emulatorUrl: EMULATOR_URL },
+  identity,
+});
 
-/** 2. Instantiate the contract, binding the owner key, the hash and the expected witness hash. */
-const contract = builder.contract(program, {
-  operatorPubkey: builder.serverKey,
-  ownerPubkey,
+/** 3. Instantiate the contract, binding the program's params to concrete values. */
+const contract = ark.contract(program, {
+  userPubkey: await identity.xOnlyPublicKey(),
+  operatorPubkey: ark.serverKey,
   hash: HASH,
-  expectedWitnessHash: EXPECTED_WITNESS_HASH,
+  witnessHash: WITNESS_HASH,
 });
 
-/**
- * The demo spends two coins from this contract: one via the `hashlock` leaf (input 0, carries the
- * preimage witness) and one via the `pinInputArkadeWitness` leaf (input 1, inspects input 0).
- * Fund the contract twice so it runs end to end without a separate manual step.
- */
-await fundViaFaucet(contract.address, Number(DEPOSIT_AMOUNT));
-await fundViaFaucet(contract.address, Number(DEPOSIT_AMOUNT));
+/** 4. Fetch two coins without assets that can be spent offchain: one for each path. */
+const now = { timestamp: new Date() };
+const coins = (await contract.getUtxos())
+  .filter((coin) => canSpendOffchain(coin, now) && !coin.assets?.length)
+  .slice(0, 2);
 
-/** 3. Wait until both coins land, then spend them together. */
-const contractInputs = await waitFor(async () => {
-  const utxos = await contract.getUtxos();
-  return utxos.length >= REQUIRED_COINS ? utxos.slice(0, REQUIRED_COINS) : [];
-}, `${REQUIRED_COINS} coins from the faucet`);
-
-const contractBalance = contractInputs.reduce(
-  (total, input) => total + BigInt(input.value),
-  0n,
-);
-
-/** The two compiled spending paths: their tapscript leaves and raw arkadeScript bytes. */
-const hashlock = contract.vtxoScript.functionByName("hashlock")!;
-const pinInputArkadeWitness = contract.vtxoScript.functionByName("pinInputArkadeWitness")!;
-
-/** Input 0 is spent via the hashlock leaf, input 1 via the pinning leaf. Order matters: the covenant reads input 0. */
-const inputs = [
-  {
-    txid: contractInputs[0].txid,
-    vout: contractInputs[0].vout,
-    value: contractInputs[0].value,
-    tapLeafScript: hashlock.tapLeafScript,
-    tapTree: contract.tapTree,
-  },
-  {
-    txid: contractInputs[1].txid,
-    vout: contractInputs[1].vout,
-    value: contractInputs[1].value,
-    tapLeafScript: pinInputArkadeWitness.tapLeafScript,
-    tapTree: contract.tapTree,
-  },
-];
-
-/** These covenants constrain inputs, not any output, so the whole balance goes back to the contract. */
-const outputs = [{ script: contract.pkScript, amount: contractBalance }];
-
-/**
- * Construct Arkade extension envelope, one packet entry per input.
- * Input 0 (hashlock) carries the preimage as its Arkade witness; that witness is what
- * INSPECTINPUTARKADEWITNESSHASH(0) hashes. Input 1 (the pinner) needs no witness.
- */
-outputs.push(
-  Extension.create([
-    EmulatorPacket.create([
-      { vin: 0, script: hashlock.arkadeScript!, witness: WITNESS },
-      { vin: 1, script: pinInputArkadeWitness.arkadeScript! },
-    ]),
-  ]).txOut(),
-);
-
-/** 4. Build the unsigned virtual transaction */
-const { arkTx, checkpoints } = buildOffchainTx(
-  inputs,
-  outputs,
-  /** The operator's checkpoint unroll tapscript. */
-  builder.checkpoint,
-);
-
-/** Attach each input's source transaction as its PrevArkTxField, which the emulator requires. */
-for (let i = 0; i < inputs.length; i++) {
-  const { txs } = await indexer.getVirtualTxs([inputs[i].txid]);
-  if (!txs[0]) {
-    throw new Error(`indexer returned no virtual tx for input txid ${inputs[i].txid}`);
-  }
-  const sourceTx = Transaction.fromPSBT(base64.decode(txs[0])).unsignedTx;
-  setArkPsbtField(arkTx, i, PrevArkTxField, sourceTx);
+if (coins.length < 2) {
+  throw new Error(`Send two payments to ${contract.address}`);
 }
 
 /**
- * 5. Sign with our per-run key, then submit.
- * Both leaves need the operator (arkd), the emulator (covenant), and our per-run key, so we sign
- * every input and every checkpoint. Input 0 also carries its preimage witness in the packet above.
+ * 5. Spend the first coin through `hashlock` as input 0, and the second through the pinning path
+ * as input 1. Order matters: the covenant reads input 0. Pay each amount back to the contract, so
+ * the demo can run again.
  */
-const inputIndexes = inputs.map((_, i) => i);
-const signedArkTx = await identity.sign(arkTx, inputIndexes);
-const signedCheckpoints = await Promise.all(checkpoints.map((c) => identity.sign(c)));
-const submitted = await builder.emulator!.submitTx(
-  base64.encode(signedArkTx.toPSBT()),
-  signedCheckpoints.map((c) => base64.encode(c.toPSBT())),
-);
-
-/**
- * 6. Extract the finalized transaction's ID
- */
-const txid = Transaction.fromPSBT(base64.decode(submitted.signedArkTx)).id;
-console.log(
-  `Covenant satisfied: input 1 pinned input 0's witness (the hashlock preimage), spent ${inputs.length} input(s): ${EXPLORER_URL}/tx/${txid}`,
-);
-
-/** Wire-encode a witness stack the way the emulator hashes it: count, then each item length-prefixed. Assumes small items (< 253 bytes). */
-function encodeWitness(items: Uint8Array[]): Uint8Array {
-  const parts: number[] = [items.length];
-  for (const item of items) {
-    if (item.length > 252) {
-      throw new Error(`encodeWitness: item too long (${item.length} bytes); use a multi-byte varint`);
-    }
-    parts.push(item.length);
-    for (const b of item) parts.push(b);
-  }
-  return Uint8Array.from(parts);
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/** Ask the Arkade faucet to fund an ark address directly (offchain). */
-async function fundViaFaucet(address: string, amount: number): Promise<void> {
-  const res = await fetch(FAUCET_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ address, amount }),
-  });
-  if (!res.ok) throw new Error(`faucet failed: ${res.status} ${await res.text()}`);
-}
-
-/** Poll until a lookup returns at least one item, or time out. */
-async function waitFor<T>(
-  lookup: () => Promise<T[]>,
-  label: string,
-  timeoutMs = 60_000,
-): Promise<T[]> {
-  console.log(`Waiting for ${label}...`);
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const items = await lookup();
-    if (items.length > 0) return items;
-    await sleep(3_000);
-  }
-  throw new Error(`timed out waiting for ${label}`);
-}
+const { txid } = await contract.functions
+  .pinInputArkadeWitness()
+  .from(coins[0], contract.unlock.hashlock(PREIMAGE))
+  .from(coins[1])
+  .to(coins.map((coin) => ({ script: contract.pkScript, amount: BigInt(coin.value) })))
+  .send();
+console.log(`Input 1 pinned the witness of input 0: ${EXPLORER_URL}/tx/${txid}`);
