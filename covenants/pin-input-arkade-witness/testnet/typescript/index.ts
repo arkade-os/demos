@@ -6,8 +6,8 @@ import {
 } from "@arkade-os/sdk";
 import { RawWitness } from "@scure/btc-signer";
 
-// `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
-type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
+// `arkade.Program` can't be used as a type yet (arkade-os/ts-sdk#856), so take it from the contract.
+type Program = arkade.ArkadeContract["program"];
 
 /** The hashlock secret. A real one is random and private. */
 const PREIMAGE = new TextEncoder().encode("open-sesame");
@@ -29,6 +29,8 @@ const program = {
     { name: "operatorPubkey", type: "pubkey" },
     { name: "hash", type: "bytes32" },
     { name: "witnessHash", type: "bytes32" },
+    /** A reserved name: `ark.contract` binds it to the operator's exit delay. */
+    { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
     hashlock: {
@@ -44,6 +46,16 @@ const program = {
       /** Reads the witness hash of input 0 and requires it to match the pinned value. */
       arkadeScript: {
         asm: [0, "INSPECTINPUTARKADEWITNESSHASH", "$witnessHash", "EQUAL"],
+      },
+    },
+    /**
+     * The exit path: if the operator is unavailable, the user alone can claim the coin onchain
+     * after the exit delay. See https://docs.arkadeos.com/vaults/exit.
+     */
+    unilateral: {
+      tapscript: {
+        signers: ["$userPubkey"],
+        csv: { type: "sequence", value: "$SERVER_EXIT_DELAY" },
       },
     },
   },

@@ -6,8 +6,8 @@ import {
 } from "@arkade-os/sdk";
 import { hex } from "@scure/base";
 
-// `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
-type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
+// `arkade.Program` can't be used as a type yet (arkade-os/ts-sdk#856), so take it from the contract.
+type Program = arkade.ArkadeContract["program"];
 
 /** A plain contract for coin A: the user and the operator sign, and no covenant applies. */
 const ownedProgram = {
@@ -16,9 +16,21 @@ const ownedProgram = {
   params: [
     { name: "userPubkey", type: "pubkey" },
     { name: "operatorPubkey", type: "pubkey" },
+    /** A reserved name: `ark.contract` binds it to the operator's exit delay. */
+    { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
     spend: { tapscript: { signers: ["$userPubkey", "$operatorPubkey"] } },
+    /**
+     * The exit path: if the operator is unavailable, the user alone can claim the coin onchain
+     * after the exit delay. See https://docs.arkadeos.com/vaults/exit.
+     */
+    unilateral: {
+      tapscript: {
+        signers: ["$userPubkey"],
+        csv: { type: "sequence", value: "$SERVER_EXIT_DELAY" },
+      },
+    },
   },
 } as const satisfies Program;
 
@@ -34,6 +46,8 @@ const guardProgram = {
     { name: "operatorPubkey", type: "pubkey" },
     { name: "pinnedTxid", type: "bytes32" },
     { name: "pinnedVout", type: "int" },
+    /** A reserved name: `ark.contract` binds it to the operator's exit delay. */
+    { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
     pinInput: {
@@ -52,6 +66,16 @@ const guardProgram = {
           "$pinnedTxid",
           "EQUAL",
         ],
+      },
+    },
+    /**
+     * The exit path: if the operator is unavailable, the user alone can claim the coin onchain
+     * after the exit delay. See https://docs.arkadeos.com/vaults/exit.
+     */
+    unilateral: {
+      tapscript: {
+        signers: ["$userPubkey"],
+        csv: { type: "sequence", value: "$SERVER_EXIT_DELAY" },
       },
     },
   },

@@ -5,8 +5,8 @@ import {
   MnemonicIdentity,
 } from "@arkade-os/sdk";
 
-// `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
-type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
+// `arkade.Program` can't be used as a type yet (arkade-os/ts-sdk#856), so take it from the contract.
+type Program = arkade.ArkadeContract["program"];
 
 const MIN_AMOUNT = 1_000n;
 
@@ -22,6 +22,8 @@ const program = {
     { name: "userPubkey", type: "pubkey" },
     { name: "operatorPubkey", type: "pubkey" },
     { name: "minAmount", type: "int" },
+    /** A reserved name: `ark.contract` binds it to the operator's exit delay. */
+    { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
     selfReferencingInputIndex: {
@@ -30,6 +32,16 @@ const program = {
       /** Covenant clause the operator runs on every spend, before it cosigns. */
       arkadeScript: {
         asm: ["PUSHCURRENTINPUTINDEX", "INSPECTINPUTVALUE", "$minAmount", "GREATERTHANOREQUAL"],
+      },
+    },
+    /**
+     * The exit path: if the operator is unavailable, the user alone can claim the coin onchain
+     * after the exit delay. See https://docs.arkadeos.com/vaults/exit.
+     */
+    unilateral: {
+      tapscript: {
+        signers: ["$userPubkey"],
+        csv: { type: "sequence", value: "$SERVER_EXIT_DELAY" },
       },
     },
   },
