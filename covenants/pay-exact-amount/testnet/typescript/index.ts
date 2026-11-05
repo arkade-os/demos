@@ -5,7 +5,6 @@ import {
   MnemonicIdentity,
 } from "@arkade-os/sdk";
 
-const { Script } = arkade;
 // `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
 type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
 const DUST = 330n;
@@ -70,32 +69,34 @@ const coins = (await contract.getUtxos()).filter(
   (coin) => canSpendOffchain(coin, now) && !coin.assets?.length,
 );
 const balance = coins.reduce((total, coin) => total + BigInt(coin.value), 0n);
+const change = balance - OUTPUT_AMOUNT;
 
-if (balance < OUTPUT_AMOUNT) {
+if (change < 0n) {
   throw new Error(
-    `Fund ${contract.address} with at least ${OUTPUT_AMOUNT - balance} more sats`,
+    `Fund ${contract.address} with at least ${-change} more sats`,
+  );
+}
+
+/**
+ * Change below dust could only go to an OP_RETURN output, and this contract could never spend
+ * that coin. Stop here, before those sats get stuck.
+ */
+if (change > 0n && change < DUST) {
+  throw new Error(
+    `Change of ${change} sats is below dust: fund ${contract.address} with at least ${DUST} more sats`,
   );
 }
 
 /**
  * 5. Spend all coins in one transaction through `payExactAmount`. Every coin's covenant checks
- * the same output 0, so the coins pay OUTPUT_AMOUNT once between them, and the surplus goes
- * back to the contract.
+ * the same output 0, so the coins pay OUTPUT_AMOUNT once between them, and any surplus goes
+ * back to the contract. The SDK signs for the user, and the operator runs the covenant and
+ * cosigns.
  */
-const spend = contract.functions
+const { txid } = await contract.functions
   .payExactAmount()
   .from(coins)
-  .to(contract.pkScript, OUTPUT_AMOUNT);
-
-const change = balance - OUTPUT_AMOUNT;
-if (change >= DUST) {
-  spend.change(contract.pkScript);
-} else if (change > 0n) {
-  // Change below dust goes to an OP_RETURN output. The operator keeps it as a coin of the
-  // contract, but that coin can't be spent offchain, so the next run leaves it out.
-  spend.to(Script.encode(["RETURN", contract.vtxoScript.tweakedPublicKey]), change);
-}
-
-/** 6. Submit. The SDK signs for the user, and the operator runs the covenant and cosigns. */
-const { txid } = await spend.send();
+  .to(contract.pkScript, OUTPUT_AMOUNT)
+  .change(contract.pkScript)
+  .send();
 console.log(`Spent ${coins.length} contract coin(s): ${EXPLORER_URL}/tx/${txid}`);
