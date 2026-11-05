@@ -124,6 +124,11 @@ if (outputs.some((output) => output.isPreconfirmed)) {
 const exitOptions = {
   wallet,
   onchainWallet,
+  /**
+   * The outputs to exit, fetched again because step 7 can replace them
+   * By default the SDK also takes recoverable outputs, which step 6 didn't check
+   */
+  vtxos: await wallet.getVtxos({ withRecoverable: false }),
   /** Where the exited funds go */
   sweepAddress: onchainWallet.address,
   /**
