@@ -19,6 +19,8 @@ const MEMPOOL_URL = "https://mutinynet.com" as const;
 const exitPackage = await readFile(PACKAGE_PATH, "utf8")
   .then(deserializeExitPackage)
   .catch((cause) => {
+    /** Other file errors (e.g. EACCES) don't mean the package is bad */
+    if (cause.code && cause.code !== "ENOENT") throw cause;
     throw new Error(
       "No valid exit package found, run the prepare-package demo first",
       { cause },
