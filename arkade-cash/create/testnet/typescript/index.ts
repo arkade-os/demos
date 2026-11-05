@@ -120,7 +120,10 @@ console.log("Decoded note:", {
   exitTimelock: note.csvTimelock,
 });
 
-/** 8. Find the output the note controls */
+/**
+ * 8. Find the output the note controls
+ * The wallet doesn't list it (the note's key owns it), so query the indexer
+ */
 const { vtxos: outputs } = await wallet.indexerProvider.getVtxos({
   scripts: [hex.encode(note.vtxoScript.pkScript)],
 });
