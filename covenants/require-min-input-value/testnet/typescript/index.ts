@@ -70,20 +70,41 @@ const contract = ark.contract(program, {
   minAmount: MIN_AMOUNT,
 });
 
-/** 4. Find a coin without assets that can be spent offchain and clears the minimum. */
+/** 4. Find two coins without assets that can be spent offchain: one on each side of the minimum. */
 const now = { timestamp: new Date() };
-const coin = (await contract.getUtxos()).find(
-  (candidate) =>
-    canSpendOffchain(candidate, now) &&
-    !candidate.assets?.length &&
-    BigInt(candidate.value) >= MIN_AMOUNT,
+const coins = (await contract.getUtxos()).filter(
+  (candidate) => canSpendOffchain(candidate, now) && !candidate.assets?.length,
 );
+const coin = coins.find((candidate) => BigInt(candidate.value) >= MIN_AMOUNT);
+const smallCoin = coins.find((candidate) => BigInt(candidate.value) < MIN_AMOUNT);
 
-if (!coin) {
-  throw new Error(`Fund ${contract.address} with at least ${MIN_AMOUNT} sats`);
+if (!coin || !smallCoin) {
+  throw new Error(`Send two payments to ${contract.address}: ${MIN_AMOUNT} sats and 500 sats`);
 }
 
-/** 5. Spend the coin back to the contract, so the demo can run again. */
+/**
+ * 5. Try to spend the small coin. The operator runs the covenant and refuses the spend, so the
+ * coin stays at the contract for the next run.
+ */
+await contract.functions
+  .requireMinInputValue()
+  .from(smallCoin)
+  .to(contract.pkScript, BigInt(smallCoin.value))
+  .send()
+  .then(
+    () => {
+      throw new Error("The covenant did not refuse this spend");
+    },
+    (error) => {
+      if (!error.message.includes("Failed to submit tx to emulator")) throw error;
+      console.log(`Refused, as expected: ${error.message}`);
+    },
+  );
+
+/**
+ * 6. Spend the other coin back to the contract, so the demo can run again. This spend differs from
+ * the refused one only in the coin, so the failure comes from the covenant.
+ */
 const { txid } = await contract.functions
   .requireMinInputValue()
   .from(coin)

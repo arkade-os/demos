@@ -32,6 +32,14 @@ const program = {
       },
     },
     /**
+     * A second path with a different Arkade Script, so step 5 can show a refused spend. Its script
+     * always passes, so a real contract would not include it.
+     */
+    differentScript: {
+      tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
+      arkadeScript: { asm: [1] },
+    },
+    /**
      * The exit path: if the operator is unavailable, the user alone can claim the coin onchain
      * after the exit delay. See https://docs.arkadeos.com/vaults/exit.
      */
@@ -74,16 +82,36 @@ const coins = (await contract.getUtxos())
   .slice(0, 2);
 
 if (coins.length < 2) {
-  throw new Error(`Send two payments to ${contract.address}`);
+  throw new Error(`Send two payments of at least 330 sats to ${contract.address}`);
 }
 
+/** Each spend pays every amount back to the contract, so the demo can run again. */
+const payBack = coins.map((coin) => ({ script: contract.pkScript, amount: BigInt(coin.value) }));
+
 /**
- * 5. Spend both coins through the same path, so both inputs carry the same script. Pay each amount
- * back to the contract, so the demo can run again.
+ * 5. Try a spend whose two inputs carry different scripts. The operator runs the covenant and
+ * refuses it. The same coins pass in step 6, so the failure comes from the covenant.
  */
+await contract.functions
+  .pinInputArkadeScript()
+  .from(coins[0], contract.unlock.differentScript())
+  .from(coins[1])
+  .to(payBack)
+  .send()
+  .then(
+    () => {
+      throw new Error("The covenant did not refuse this spend");
+    },
+    (error) => {
+      if (!error.message.includes("Failed to submit tx to emulator")) throw error;
+      console.log(`Refused, as expected: ${error.message}`);
+    },
+  );
+
+/** 6. Spend both coins through the same path, so both inputs carry the same script. */
 const { txid } = await contract.functions
   .pinInputArkadeScript()
   .from(coins)
-  .to(coins.map((coin) => ({ script: contract.pkScript, amount: BigInt(coin.value) })))
+  .to(payBack)
   .send();
 console.log(`Inputs 0 and 1 carried the same Arkade Script: ${EXPLORER_URL}/tx/${txid}`);

@@ -93,18 +93,40 @@ const coins = (await contract.getUtxos())
   .slice(0, 2);
 
 if (coins.length < 2) {
-  throw new Error(`Send two payments to ${contract.address}`);
+  throw new Error(`Send two payments of at least 330 sats to ${contract.address}`);
 }
 
+/** Each spend pays every amount back to the contract, so the demo can run again. */
+const payBack = coins.map((coin) => ({ script: contract.pkScript, amount: BigInt(coin.value) }));
+
 /**
- * 5. Spend the first coin through `hashlock` as input 0, and the second through the pinning path
- * as input 1. Order matters: the covenant reads input 0. Pay each amount back to the contract, so
- * the demo can run again.
+ * 5. Try to spend both coins through the pinning path. Input 0 then has no Arkade witness, so the
+ * operator refuses the spend. The same coins pass in step 6, so the failure comes from the
+ * covenant.
+ */
+await contract.functions
+  .pinInputArkadeWitness()
+  .from(coins)
+  .to(payBack)
+  .send()
+  .then(
+    () => {
+      throw new Error("The covenant did not refuse this spend");
+    },
+    (error) => {
+      if (!error.message.includes("Failed to submit tx to emulator")) throw error;
+      console.log(`Refused, as expected: ${error.message}`);
+    },
+  );
+
+/**
+ * 6. Spend the first coin through `hashlock` as input 0, and the second through the pinning path
+ * as input 1. Order matters: the covenant reads input 0.
  */
 const { txid } = await contract.functions
   .pinInputArkadeWitness()
   .from(coins[0], contract.unlock.hashlock(PREIMAGE))
   .from(coins[1])
-  .to(coins.map((coin) => ({ script: contract.pkScript, amount: BigInt(coin.value) })))
+  .to(payBack)
   .send();
 console.log(`Input 1 pinned the witness of input 0: ${EXPLORER_URL}/tx/${txid}`);

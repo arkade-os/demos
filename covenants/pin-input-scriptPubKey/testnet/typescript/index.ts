@@ -120,18 +120,41 @@ const coinA = await spendable(owned);
 const guardCoin = await spendable(guard);
 
 if (!coinA || !guardCoin) {
-  throw new Error(`Fund ${owned.address} and ${guard.address}`);
+  throw new Error(`Send at least 330 sats to ${owned.address} and to ${guard.address}`);
 }
 
+/** Each spend pays each coin back to its own contract, so the demo can run again. */
+const payBack = [
+  { script: owned.pkScript, amount: BigInt(coinA.value) },
+  { script: guard.pkScript, amount: BigInt(guardCoin.value) },
+];
+
 /**
- * 5. Spend coin A as input 0 and the guard as input 1. Order matters: the covenant reads input 0.
- * Pay each coin back to its own contract, so the demo can run again.
+ * 5. Try the spend with the guard as input 0. Order matters: the covenant reads input 0, so the
+ * operator refuses this spend. The same coins pass in step 6, so the failure comes from the
+ * covenant.
  */
+await guard.functions
+  .pinInputScriptPubKey()
+  .from(guardCoin)
+  .from(coinA, owned.unlock.spend())
+  .to(payBack)
+  .send()
+  .then(
+    () => {
+      throw new Error("The covenant did not refuse this spend");
+    },
+    (error) => {
+      if (!error.message.includes("Failed to submit tx to emulator")) throw error;
+      console.log(`Refused, as expected: ${error.message}`);
+    },
+  );
+
+/** 6. Spend coin A as input 0 and the guard as input 1. */
 const { txid } = await guard.functions
   .pinInputScriptPubKey()
   .from(coinA, owned.unlock.spend())
   .from(guardCoin)
-  .to(owned.pkScript, BigInt(coinA.value))
-  .to(guard.pkScript, BigInt(guardCoin.value))
+  .to(payBack)
   .send();
 console.log(`Input 0 matched the pinned witness program: ${EXPLORER_URL}/tx/${txid}`);

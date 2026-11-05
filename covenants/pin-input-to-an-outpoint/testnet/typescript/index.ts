@@ -98,7 +98,7 @@ const ark = await Arkade.connect({
   identity,
 });
 
-/** 3. Instantiate the plain contract, then fetch two coins without assets from it. */
+/** 3. Instantiate the plain contract, then fetch its coins without assets. */
 const keys = {
   userPubkey: await identity.xOnlyPublicKey(),
   operatorPubkey: ark.serverKey,
@@ -106,14 +106,13 @@ const keys = {
 const owned = ark.contract(ownedProgram, keys);
 
 const now = { timestamp: new Date() };
-const coins = (await owned.getUtxos()).filter(
-  (coin) => canSpendOffchain(coin, now) && !coin.assets?.length,
-);
+const spendable = (coins: Awaited<ReturnType<typeof owned.getUtxos>>) =>
+  coins.filter((coin) => canSpendOffchain(coin, now) && !coin.assets?.length);
+const [coinA, guardFunds] = spendable(await owned.getUtxos());
 
-if (coins.length < 2) {
-  throw new Error(`Send two payments to ${owned.address}`);
+if (!coinA) {
+  throw new Error(`Send two payments of at least 330 sats to ${owned.address}`);
 }
-const [coinA, guardFunds] = coins;
 
 /**
  * 4. Find the outpoint to pin. Input 0 of an Arkade transaction spends the checkpoint of a coin,
@@ -135,23 +134,55 @@ const guard = ark.contract(guardProgram, {
   pinnedVout: 0,
 });
 
-/** 6. Fund the guard from the second coin. */
-const funding = await owned.functions
-  .spend()
-  .from(guardFunds)
-  .to(guard.pkScript, BigInt(guardFunds.value))
-  .send();
-const guardCoin = { txid: funding.txid, vout: 0, value: guardFunds.value };
+/**
+ * 6. Fund the guard from the second coin. A run that stopped after this step left a coin at the
+ * guard. Offchain, that coin can only move alongside coin A, so reuse it.
+ */
+const fundGuard = async () => {
+  if (!guardFunds) {
+    throw new Error(`Send another payment of at least 330 sats to ${owned.address}`);
+  }
+  const { txid } = await owned.functions
+    .spend()
+    .from(guardFunds)
+    .to(guard.pkScript, BigInt(guardFunds.value))
+    .send();
+  return { txid, vout: 0, value: guardFunds.value };
+};
+const [leftover] = spendable(await guard.getUtxos());
+const guardCoin = leftover ?? (await fundGuard());
+
+/** Each spend pays both amounts back to the plain contract, so the demo can run again. */
+const payBack = [coinA, guardCoin].map((coin) => ({
+  script: owned.pkScript,
+  amount: BigInt(coin.value),
+}));
 
 /**
- * 7. Spend coin A as input 0 and the guard as input 1. Pay both amounts back to the plain
- * contract, so the demo can run again.
+ * 7. Try the spend with the guard as input 0. That input spends a different outpoint, so the
+ * operator refuses it. The same coins pass in step 8, so the failure comes from the covenant.
  */
+await guard.functions
+  .pinInput()
+  .from(guardCoin)
+  .from(coinA, owned.unlock.spend())
+  .to(payBack)
+  .send()
+  .then(
+    () => {
+      throw new Error("The covenant did not refuse this spend");
+    },
+    (error) => {
+      if (!error.message.includes("Failed to submit tx to emulator")) throw error;
+      console.log(`Refused, as expected: ${error.message}`);
+    },
+  );
+
+/** 8. Spend coin A as input 0 and the guard as input 1. */
 const { txid } = await guard.functions
   .pinInput()
   .from(coinA, owned.unlock.spend())
   .from(guardCoin)
-  .to(owned.pkScript, BigInt(coinA.value))
-  .to(owned.pkScript, BigInt(guardFunds.value))
+  .to(payBack)
   .send();
 console.log(`Input 0 spent the pinned outpoint: ${EXPLORER_URL}/tx/${txid}`);

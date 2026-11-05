@@ -12,6 +12,12 @@ type Program = arkade.ArkadeContract["program"];
 const FINAL_SEQUENCE = 0xffffffffn;
 
 /**
+ * The locktime of the second path, which can be any past Unix time. It can't be a block height:
+ * this operator refuses every path of a contract that has a block-height timelock.
+ */
+const PAST_TIME = 1_700_000_000n;
+
+/**
  * A covenant, `pinInputSequence`, that only lets the user move funds when input 0 carries the
  * pinned nSequence value.
  */
@@ -30,6 +36,16 @@ const program = {
       /** Tapscript-level signers: the user and the operator. */
       tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
       /** Covenant clause the operator runs on every spend, before it cosigns. */
+      arkadeScript: {
+        asm: [0, "INSPECTINPUTSEQUENCE", "$sequence", "EQUAL"],
+      },
+    },
+    /**
+     * The same covenant on a path with an absolute timelock, so step 5 can show a refused spend.
+     * Its spends set a locktime, so their inputs don't carry the final sequence.
+     */
+    pinInputSequenceWithLocktime: {
+      tapscript: { signers: ["$userPubkey", "$operatorPubkey"], cltv: PAST_TIME },
       arkadeScript: {
         asm: [0, "INSPECTINPUTSEQUENCE", "$sequence", "EQUAL"],
       },
@@ -78,10 +94,30 @@ const coin = (await contract.getUtxos()).find(
 );
 
 if (!coin) {
-  throw new Error(`Fund ${contract.address} to run this demo`);
+  throw new Error(`Send at least 330 sats to ${contract.address}`);
 }
 
-/** 5. Spend the coin back to the contract, so the demo can run again. */
+/**
+ * 5. Try to spend the coin through the path with a locktime. Input 0 no longer carries the pinned
+ * sequence, so the operator refuses the spend. The same coin passes in step 6, so the failure
+ * comes from the covenant.
+ */
+await contract.functions
+  .pinInputSequenceWithLocktime()
+  .from(coin)
+  .to(contract.pkScript, BigInt(coin.value))
+  .send()
+  .then(
+    () => {
+      throw new Error("The covenant did not refuse this spend");
+    },
+    (error) => {
+      if (!error.message.includes("Failed to submit tx to emulator")) throw error;
+      console.log(`Refused, as expected: ${error.message}`);
+    },
+  );
+
+/** 6. Spend the coin back to the contract, so the demo can run again. */
 const { txid } = await contract.functions
   .pinInputSequence()
   .from(coin)
