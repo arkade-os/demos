@@ -22,6 +22,8 @@ const program = {
     { name: "userPubkey", type: "pubkey" },
     { name: "operatorPubkey", type: "pubkey" },
     { name: "outputAmount", type: "int" },
+    /** A reserved name: `ark.contract` binds it to the operator's exit delay. */
+    { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
     payExactAmount: {
@@ -30,6 +32,16 @@ const program = {
       /** Covenant clause the operator runs on every spend, before it cosigns. */
       arkadeScript: {
         asm: [0, "INSPECTOUTPUTVALUE", "$outputAmount", "EQUAL"],
+      },
+    },
+    /**
+     * The exit path: if the operator is unavailable, the user alone can claim the coin onchain
+     * after the exit delay. See https://docs.arkadeos.com/vaults/exit.
+     */
+    unilateral: {
+      tapscript: {
+        signers: ["$userPubkey"],
+        csv: { type: "sequence", value: "$SERVER_EXIT_DELAY" },
       },
     },
   },
@@ -72,9 +84,12 @@ const balance = coins.reduce((total, coin) => total + BigInt(coin.value), 0n);
 const change = balance - OUTPUT_AMOUNT;
 
 if (change < 0n) {
-  throw new Error(
-    `Fund ${contract.address} with at least ${-change} more sats`,
-  );
+  /**
+   * A top-up of a small shortfall would be a coin below dust. The top-up also has to leave change
+   * of at least DUST, so it needs the shortfall plus DUST.
+   */
+  const topUp = -change < DUST ? DUST - change : -change;
+  throw new Error(`Fund ${contract.address} with at least ${topUp} more sats`);
 }
 
 /**
@@ -89,7 +104,27 @@ if (change > 0n && change < DUST) {
 }
 
 /**
- * 5. Spend all coins in one transaction through `payExactAmount`. Every coin's covenant checks
+ * 5. Try to pay less than OUTPUT_AMOUNT at output 0. The operator runs the covenant and refuses the
+ * spend. The same coins pass in step 6, so the failure comes from the covenant.
+ */
+await contract.functions
+  .payExactAmount()
+  .from(coins)
+  .to(contract.pkScript, OUTPUT_AMOUNT - DUST)
+  .change(contract.pkScript)
+  .send()
+  .then(
+    () => {
+      throw new Error("The covenant did not refuse this spend");
+    },
+    (error) => {
+      if (!error.message.includes("Failed to submit tx to emulator")) throw error;
+      console.log(`Refused, as expected: ${error.message}`);
+    },
+  );
+
+/**
+ * 6. Spend all coins in one transaction through `payExactAmount`. Every coin's covenant checks
  * the same output 0, so the coins pay OUTPUT_AMOUNT once between them, and any surplus goes
  * back to the contract. The SDK signs for the user, and the operator runs the covenant and
  * cosigns.
