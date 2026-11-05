@@ -111,8 +111,8 @@ await contract.functions
 
 /**
  * 6. Spend both good coins through the same path. The operator runs the covenant once per input,
- * and each run checks its own coin. This spend differs from the refused one only in its coins, so
- * the failure comes from the covenant.
+ * and each run checks its own coin. The refusal's error doesn't name the cause: the evidence is
+ * that this spend differs from it only in one coin.
  */
 const { txid } = await contract.functions
   .selfReferencingInputIndex()

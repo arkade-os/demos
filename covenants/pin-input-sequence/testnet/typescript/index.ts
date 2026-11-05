@@ -99,8 +99,8 @@ if (!coin) {
 
 /**
  * 5. Try to spend the coin through the path with a locktime. Input 0 no longer carries the pinned
- * sequence, so the operator refuses the spend. The same coin passes in step 6, so the failure
- * comes from the covenant.
+ * sequence, so the operator refuses the spend. The error doesn't name the cause: the evidence is
+ * that the same coin passes in step 6 through the path without a locktime.
  */
 await contract.functions
   .pinInputSequenceWithLocktime()

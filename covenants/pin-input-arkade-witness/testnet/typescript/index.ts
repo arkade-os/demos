@@ -101,8 +101,8 @@ const payBack = coins.map((coin) => ({ script: contract.pkScript, amount: BigInt
 
 /**
  * 5. Try to spend both coins through the pinning path. Input 0 then has no Arkade witness, so the
- * operator refuses the spend. The same coins pass in step 6, so the failure comes from the
- * covenant.
+ * operator refuses the spend. The error doesn't name the cause: the evidence is that the same
+ * coins pass in step 6.
  */
 await contract.functions
   .pinInputArkadeWitness()

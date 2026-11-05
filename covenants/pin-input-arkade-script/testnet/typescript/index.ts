@@ -90,7 +90,7 @@ const payBack = coins.map((coin) => ({ script: contract.pkScript, amount: BigInt
 
 /**
  * 5. Try a spend whose two inputs carry different scripts. The operator runs the covenant and
- * refuses it. The same coins pass in step 6, so the failure comes from the covenant.
+ * refuses it. The error doesn't name the cause: the evidence is that the same coins pass in step 6.
  */
 await contract.functions
   .pinInputArkadeScript()

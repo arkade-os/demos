@@ -131,8 +131,8 @@ const payBack = [
 
 /**
  * 5. Try the spend with the guard as input 0. Order matters: the covenant reads input 0, so the
- * operator refuses this spend. The same coins pass in step 6, so the failure comes from the
- * covenant.
+ * operator refuses this spend. The error doesn't name the cause: the evidence is that the same
+ * coins pass in step 6.
  */
 await guard.functions
   .pinInputScriptPubKey()

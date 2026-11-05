@@ -102,8 +102,8 @@ await contract.functions
   );
 
 /**
- * 6. Spend the other coin back to the contract, so the demo can run again. This spend differs from
- * the refused one only in the coin, so the failure comes from the covenant.
+ * 6. Spend the other coin back to the contract, so the demo can run again. The refusal's error
+ * doesn't name the cause: the evidence is that this spend differs from it only in the coin.
  */
 const { txid } = await contract.functions
   .requireMinInputValue()

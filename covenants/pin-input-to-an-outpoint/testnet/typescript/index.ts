@@ -160,7 +160,8 @@ const payBack = [coinA, guardCoin].map((coin) => ({
 
 /**
  * 7. Try the spend with the guard as input 0. That input spends a different outpoint, so the
- * operator refuses it. The same coins pass in step 8, so the failure comes from the covenant.
+ * operator refuses it. The error doesn't name the cause: the evidence is that the same coins pass
+ * in step 8.
  */
 await guard.functions
   .pinInput()
