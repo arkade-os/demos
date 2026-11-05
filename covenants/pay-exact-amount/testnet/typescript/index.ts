@@ -5,8 +5,8 @@ import {
   MnemonicIdentity,
 } from "@arkade-os/sdk";
 
-// `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
-type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
+// `arkade.Program` can't be used as a type yet (arkade-os/ts-sdk#856), so take it from the contract.
+type Program = arkade.ArkadeContract["program"];
 const DUST = 330n;
 
 const OUTPUT_AMOUNT = 1_000n;
