@@ -39,7 +39,10 @@ const guardProgram = {
     pinInput: {
       /** Tapscript-level signers: the user and the operator. */
       tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
-      /** Covenant clause the operator runs on every spend, before it cosigns. */
+      /**
+       * Covenant clause the operator runs on every spend, before it cosigns.
+       * INSPECTINPUTOUTPOINT pushes the txid, then the vout on top.
+       */
       arkadeScript: {
         asm: [
           0,
