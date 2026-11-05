@@ -105,7 +105,7 @@ if (change > 0n && change < DUST) {
 
 /**
  * 5. Try to pay less than OUTPUT_AMOUNT at output 0. The operator runs the covenant and refuses the
- * spend. The same coins pass in step 6, so the failure comes from the covenant.
+ * spend. The error doesn't name the cause: the evidence is that the same coins pass in step 6.
  */
 await contract.functions
   .payExactAmount()
