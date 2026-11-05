@@ -79,7 +79,8 @@ if (change < 0n) {
 
 /**
  * Change below dust could only go to an OP_RETURN output, and this contract could never spend
- * that coin. Stop here, before those sats get stuck.
+ * that coin. Stop here, before those sats get stuck. A top-up below DUST would get stuck too, so
+ * the message asks for DUST rather than the shortfall.
  */
 if (change > 0n && change < DUST) {
   throw new Error(
