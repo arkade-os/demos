@@ -1,6 +1,11 @@
-import { arkade, canSpendOffchain } from "@arkade-os/sdk";
+import {
+  Arkade,
+  arkade,
+  canSpendOffchain,
+  MnemonicIdentity,
+} from "@arkade-os/sdk";
 
-const { Arkade, Script } = arkade;
+const { Script } = arkade;
 // `arkade.Program` is not usable as a type in the published typings, so take it from the contract.
 type Program = ConstructorParameters<typeof arkade.ArkadeContract>[1];
 const DUST = 330n;
@@ -8,20 +13,22 @@ const DUST = 330n;
 const OUTPUT_AMOUNT = 1_000n;
 
 /**
- * A basic covenant contract program, `payExactAmount`, that only lets the operator move funds
+ * A basic covenant contract program, `payExactAmount`, that only lets the user move funds
  * when output 0 pays exactly OUTPUT_AMOUNT.
  */
 const program = {
   version: 1,
+  /** Typed constructor params: every `$name` below must be declared here */
   params: [
+    { name: "userPubkey", type: "pubkey" },
     { name: "operatorPubkey", type: "pubkey" },
     { name: "outputAmount", type: "int" },
   ],
   functions: {
     payExactAmount: {
-      /** Tapscript-level signer requirement: only the operator key. */
-      tapscript: { signers: ["$operatorPubkey"] },
-      /** Covenant clause executed by the emulator on every spend. */
+      /** Tapscript-level signers: the user and the operator. */
+      tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
+      /** Covenant clause the operator runs on every spend, before it cosigns. */
       arkadeScript: {
         asm: [0, "INSPECTOUTPUTVALUE", "$outputAmount", "EQUAL"],
       },
@@ -29,23 +36,32 @@ const program = {
   },
 } as const satisfies Program;
 
-const OPERATOR_URL = "https://mutinynet.arkade.sh";
-const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh";
-const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh";
+const SEED_PHRASE =
+  "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" as const;
+const OPERATOR_URL = "https://mutinynet.arkade.sh" as const;
+const EMULATOR_URL = "https://emulator.mutinynet.arkade.sh" as const;
+const EXPLORER_URL = "https://explorer.mutinynet.arkade.sh" as const;
 
-/** 1. Connect to the operator and the covenant co-signer (emulator). */
-const ark = await Arkade.connect({
-  service: { operatorUrl: OPERATOR_URL, emulatorUrl: EMULATOR_URL },
+/** 1. Create user identity */
+const identity = MnemonicIdentity.fromMnemonic(SEED_PHRASE, {
+  isMainnet: false,
 });
 
-/** 2. Instantiate the contract, binding the program's params to concrete values. */
+/** 2. Connect to the operator. `emulatorUrl` is where it runs covenant scripts. */
+const ark = await Arkade.connect({
+  service: { operatorUrl: OPERATOR_URL, emulatorUrl: EMULATOR_URL },
+  identity,
+});
+
+/** 3. Instantiate the contract, binding the program's params to concrete values. */
 const contract = ark.contract(program, {
+  userPubkey: await identity.xOnlyPublicKey(),
   operatorPubkey: ark.serverKey,
   outputAmount: OUTPUT_AMOUNT,
 });
 
 /**
- * 3. Fetch every coin at the contract address that can still be spent offchain. An expired or
+ * 4. Fetch every coin at the contract address that can still be spent offchain. An expired or
  * swept coin has to be renewed instead, and one in the spend would make the operator reject it.
  * Anyone can send an asset coin here too; this spend routes no assets, so it leaves those out.
  */
@@ -62,9 +78,9 @@ if (balance < OUTPUT_AMOUNT) {
 }
 
 /**
- * 4. Spend all coins in one transaction through `payExactAmount`. The builder writes one
- * emulator entry per coin. Every coin's covenant checks the same output 0, so the coins
- * pay OUTPUT_AMOUNT once between them, and the surplus goes back to the contract.
+ * 5. Spend all coins in one transaction through `payExactAmount`. Every coin's covenant checks
+ * the same output 0, so the coins pay OUTPUT_AMOUNT once between them, and the surplus goes
+ * back to the contract.
  */
 const spend = contract.functions
   .payExactAmount()
@@ -75,13 +91,11 @@ const change = balance - OUTPUT_AMOUNT;
 if (change >= DUST) {
   spend.change(contract.pkScript);
 } else if (change > 0n) {
-  // Change below dust can't be a VTXO, so it goes to an OP_RETURN output.
+  // Change below dust goes to an OP_RETURN output. The operator keeps it as a coin of the
+  // contract, but that coin can't be spent offchain, so the next run leaves it out.
   spend.to(Script.encode(["RETURN", contract.vtxoScript.tweakedPublicKey]), change);
 }
 
-/**
- * 5. Submit. `payExactAmount` is signed only by the operator, so no client identity is
- * involved: the emulator cosigns and finalizes with the operator.
- */
+/** 6. Submit. The SDK signs for the user, and the operator runs the covenant and cosigns. */
 const { txid } = await spend.send();
 console.log(`Spent ${coins.length} contract coin(s): ${EXPLORER_URL}/tx/${txid}`);

@@ -8,6 +8,11 @@
     - [x] typescript
   - [x] testnet
     - [x] typescript
+- [ ] custom boarding tapscript (raw tapscript: user + operator, user exit, backup key recovery)
+  - [ ] mainnet
+    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
 - [x] deprecated cosigner tapscripts
   - [x] mainnet
     - [x] typescript

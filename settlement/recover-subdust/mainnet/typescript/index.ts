@@ -70,7 +70,11 @@ const wallet = await Wallet.create({
 /** 4. Fetch available balance */
 const { available, assets } = await wallet.getBalance();
 
-/** 5. Create 2 subdust outputs */
+/**
+ * 5. Create 2 subdust outputs
+ * The mainnet operator refuses outputs below its dust amount, so this step
+ * fails on mainnet; the testnet version runs the whole flow
+ */
 const required =
   wallet.dustAmount * 2n + (assets.length ? wallet.dustAmount : 0n);
 const subdustAmount = Number(wallet.dustAmount) / 2;

@@ -77,14 +77,16 @@ const outputs = await wallet.getVtxos({
 
 /** 5. Flat map into asset 'bundles' (multiple assets can live on the same output) */
 const extractAssetBundles = (outputs: ExtendedVirtualCoin[]) =>
-  outputs.flatMap(({ txid, vout, virtualStatus: { state: status }, assets }) =>
+  outputs.flatMap(({ txid, vout, isPreconfirmed, isSwept, isSpent, assets }) =>
     (assets || [])
       /** Filter only matching assets */
       .filter((asset) => asset.assetId === ASSET_ID)
       .map((asset) => ({
         txid,
         vout,
-        status,
+        isPreconfirmed,
+        isSwept,
+        isSpent,
         ...asset,
       })),
   );

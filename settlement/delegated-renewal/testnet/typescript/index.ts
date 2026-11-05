@@ -204,7 +204,7 @@ if (delegated.length < delegableOutputs.length) {
 
 /** 7. Graceful shutdown */
 console.log("Disposing contract manager...");
-contractManager.dispose();
+await contractManager.dispose();
 
 console.log("Disposing wallet...");
 await wallet.dispose();
