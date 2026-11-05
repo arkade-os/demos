@@ -1,123 +1,57 @@
-- [-] get address
-  - [-] mainnet
+- [x] get address
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] get balance (with parsed assets)
-  - [-] mainnet
+- [x] get balance (with parsed assets)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] consolidate funds (sweep)
-  - [-] mainnet
+- [x] consolidate funds (sweep)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [ ] finalize pending transactions
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] notify incoming asset (filtered by ID)
-  - [-] mainnet
+- [x] notify incoming asset (filtered by ID)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] notify incoming bitcoin (including boarding inputs)
-  - [-] mainnet
+- [x] notify incoming bitcoin (including boarding inputs)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] fetch spendable outputs
-  - [-] mainnet
+- [x] fetch spendable outputs
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [ ] create op_return
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [-] send assets (multiple recipients)
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [-] send bitcoin (multiple recipients)
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [ ] get transaction history
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 
 TODO: in general, need more specific environment demos -- Expo/RN, service worker, PWA, etc

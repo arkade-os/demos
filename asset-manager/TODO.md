@@ -1,33 +1,15 @@
-- [-] burn assets
-  - [-] mainnet
+- [x] burn assets
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] get asset details (including control asset, custom metadata)
-  - [-] mainnet
+- [x] get asset details (including control asset, custom metadata)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-- [-] issue + reissue asset (with control asset, custom metadata)
-  - [-] mainnet
+- [x] issue + reissue asset (with control asset, custom metadata)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net

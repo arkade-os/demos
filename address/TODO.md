@@ -1,22 +1,10 @@
-- [-] parse address details (script public key, operator pubkey)
-  - [-] mainnet
+- [x] parse address details (script public key, operator pubkey)
+  - [x] mainnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
-  - [-] testnet
+  - [x] testnet
     - [x] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
 - [ ] derive from script
   - [ ] mainnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
   - [ ] testnet
     - [ ] typescript
-    - [ ] go
-    - [ ] rust
-    - [ ] .net
