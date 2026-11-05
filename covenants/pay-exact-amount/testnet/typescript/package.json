@@ -6,8 +6,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@arkade-os/sdk": "^0.5.1",
-    "@scure/base": "^2.4.0"
+    "@arkade-os/sdk": "^0.5.3"
   },
   "devDependencies": {
     "@types/node": "^26.6.2",
