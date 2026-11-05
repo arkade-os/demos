@@ -148,7 +148,9 @@ swapClient.onUpdate((update) => {
 /**
  * 9. Wait for the receiver's confirmation (LUD-21)
  * Settles once lnurl-server has claimed the funds for the offline wallet,
- * and the returned preimage is the proof of payment
+ * and the returned preimage is the proof of payment. This throws after the
+ * timeout. The swap stays in the database: a re-run resumes it, and refunds
+ * it if unpaid
  */
 const status = await payer.pollVerify(invoice.verify, {
   timeoutMs: 600_000,
@@ -156,12 +158,8 @@ const status = await payer.pollVerify(invoice.verify, {
   expect: invoice,
 });
 
-if (status.kind === "bolt11" && status.settled) {
+if (status.kind === "bolt11") {
   console.log(`Paid ${LIGHTNING_ADDRESS}, preimage: ${status.preimage}`);
-} else {
-  /** The swap stays in the database: a re-run resumes it, and refunds it if unpaid */
-  console.error("Payment not settled:", status);
-  process.exitCode = 1;
 }
 
 /** 10. Graceful shutdown */
