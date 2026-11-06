@@ -6,51 +6,51 @@
 
 <!-- input introspection -->
 
-- [ ] pin input to an outpoint `OP_INSPECTINPUTOUTPOINT`
+- [-] require input outpoint `OP_INSPECTINPUTOUTPOINT`
   - [ ] mainnet
     - [ ] typescript
-  - [ ] testnet
-    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
 
-- [ ] require minimum input value `OP_INSPECTINPUTVALUE`
+- [-] require minimum input value `OP_INSPECTINPUTVALUE`
   - [ ] mainnet
     - [ ] typescript
-  - [ ] testnet
-    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
 
-- [ ] pin input scriptPubKey `OP_INSPECTINPUTSCRIPTPUBKEY`
+- [-] require input scriptPubKey `OP_INSPECTINPUTSCRIPTPUBKEY`
   - [ ] mainnet
     - [ ] typescript
-  - [ ] testnet
-    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
 
-- [ ] pin input sequence `OP_INSPECTINPUTSEQUENCE`
+- [-] require input sequence `OP_INSPECTINPUTSEQUENCE`
   - [ ] mainnet
     - [ ] typescript
-  - [ ] testnet
-    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
 
-- [ ] recursive covenant: pin input's arkade script `OP_INSPECTINPUTARKADESCRIPTHASH`
+- [-] recursive covenant: require input's arkade script `OP_INSPECTINPUTARKADESCRIPTHASH`
   - [ ] mainnet
     - [ ] typescript
-  - [ ] testnet
-    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
 
-- [ ] recursive covenant: pin input's arkade witness `OP_INSPECTINPUTARKADEWITNESSHASH`
+- [-] recursive covenant: require input's arkade witness `OP_INSPECTINPUTARKADEWITNESSHASH`
   - [ ] mainnet
     - [ ] typescript
-  - [ ] testnet
-    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
 
-- [ ] self-referencing input index `OP_PUSHCURRENTINPUTINDEX`
+- [-] self-referencing input index `OP_PUSHCURRENTINPUTINDEX`
   - [ ] mainnet
     - [ ] typescript
-  - [ ] testnet
-    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
 
 <!-- output introspection -->
 
-- [ ] pin output scriptPubKey `OP_INSPECTOUTPUTSCRIPTPUBKEY`
+- [ ] require output scriptPubKey `OP_INSPECTOUTPUTSCRIPTPUBKEY`
   - [ ] mainnet
     - [ ] typescript
   - [ ] testnet
@@ -58,13 +58,13 @@
 
 <!-- transaction introspection -->
 
-- [ ] pin transaction version `OP_INSPECTVERSION`
+- [ ] require transaction version `OP_INSPECTVERSION`
   - [ ] mainnet
     - [ ] typescript
   - [ ] testnet
     - [ ] typescript
 
-- [ ] pin transaction locktime `OP_INSPECTLOCKTIME`
+- [ ] require transaction locktime `OP_INSPECTLOCKTIME`
   - [ ] mainnet
     - [ ] typescript
   - [ ] testnet
@@ -88,7 +88,7 @@
   - [ ] testnet
     - [ ] typescript
 
-- [ ] pin transaction id `OP_TXID`
+- [ ] require transaction id `OP_TXID`
   - [ ] mainnet
     - [ ] typescript
   - [ ] testnet
