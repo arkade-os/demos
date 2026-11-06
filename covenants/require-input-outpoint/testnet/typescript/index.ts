@@ -35,8 +35,8 @@ const ownedProgram = {
 } as const satisfies Program;
 
 /**
- * A covenant, `pinInput`, that only lets the user move funds when input 0 spends one exact
- * outpoint, chosen before the guard is funded.
+ * A covenant, `requireInputOutpoint`, that only lets the user move funds when input 0 spends one
+ * exact outpoint, chosen before the guard is funded.
  */
 const guardProgram = {
   version: 1,
@@ -44,13 +44,13 @@ const guardProgram = {
   params: [
     { name: "userPubkey", type: "pubkey" },
     { name: "operatorPubkey", type: "pubkey" },
-    { name: "pinnedTxid", type: "bytes32" },
-    { name: "pinnedVout", type: "int" },
+    { name: "requiredTxid", type: "bytes32" },
+    { name: "requiredVout", type: "int" },
     /** A reserved name: `ark.contract` binds it to the operator's exit delay. */
     { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
-    pinInput: {
+    requireInputOutpoint: {
       /** Tapscript-level signers: the user and the operator. */
       tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
       /**
@@ -61,9 +61,9 @@ const guardProgram = {
         asm: [
           0,
           "INSPECTINPUTOUTPOINT",
-          "$pinnedVout",
+          "$requiredVout",
           "EQUALVERIFY",
-          "$pinnedTxid",
+          "$requiredTxid",
           "EQUAL",
         ],
       },
@@ -115,7 +115,7 @@ if (!coinA) {
 }
 
 /**
- * 4. Find the outpoint to pin. Input 0 of an Arkade transaction spends the checkpoint of a coin,
+ * 4. Find the required outpoint. Input 0 of an Arkade transaction spends the checkpoint of a coin,
  * not the coin, so INSPECTINPUTOUTPOINT sees the checkpoint. The checkpoint commits only to the
  * coin, its spending path and the operator's checkpoint script. The other inputs and outputs of
  * the spend cannot change it, so a trial build gives the final txid.
@@ -129,9 +129,9 @@ const { checkpoints } = await owned.functions
 /** 5. Instantiate the guard. The covenant reads the txid in internal (reversed) byte order. */
 const guard = ark.contract(guardProgram, {
   ...keys,
-  pinnedTxid: hex.decode(checkpoints[0].id).reverse(),
+  requiredTxid: hex.decode(checkpoints[0].id).reverse(),
   /** A checkpoint has one output. */
-  pinnedVout: 0,
+  requiredVout: 0,
 });
 
 /**
@@ -164,7 +164,7 @@ const payBack = [coinA, guardCoin].map((coin) => ({
  * in step 8.
  */
 await guard.functions
-  .pinInput()
+  .requireInputOutpoint()
   .from(guardCoin)
   .from(coinA, owned.unlock.spend())
   .to(payBack)
@@ -181,9 +181,9 @@ await guard.functions
 
 /** 8. Spend coin A as input 0 and the guard as input 1. */
 const { txid } = await guard.functions
-  .pinInput()
+  .requireInputOutpoint()
   .from(coinA, owned.unlock.spend())
   .from(guardCoin)
   .to(payBack)
   .send();
-console.log(`Input 0 spent the pinned outpoint: ${EXPLORER_URL}/tx/${txid}`);
+console.log(`Input 0 spent the required outpoint: ${EXPLORER_URL}/tx/${txid}`);

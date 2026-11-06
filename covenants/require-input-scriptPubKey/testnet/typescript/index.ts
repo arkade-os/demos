@@ -36,9 +36,9 @@ const ownedProgram = {
 } as const satisfies Program;
 
 /**
- * A covenant, `pinInputScriptPubKey`, that only lets the user move funds when input 0 is locked to
- * the pinned witness program. A script cannot contain its own hash, so the pinned coin must sit at
- * a different contract.
+ * A covenant, `requireInputScriptPubKey`, that only lets the user move funds when input 0 is locked
+ * to the required witness program. A script cannot contain its own hash, so input 0 must spend a
+ * coin at a different contract.
  */
 const guardProgram = {
   version: 1,
@@ -46,12 +46,12 @@ const guardProgram = {
   params: [
     { name: "userPubkey", type: "pubkey" },
     { name: "operatorPubkey", type: "pubkey" },
-    { name: "pinnedProgram", type: "bytes32" },
+    { name: "requiredProgram", type: "bytes32" },
     /** A reserved name: `ark.contract` binds it to the operator's exit delay. */
     { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
-    pinInputScriptPubKey: {
+    requireInputScriptPubKey: {
       /** Tapscript-level signers: the user and the operator. */
       tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
       /**
@@ -64,7 +64,7 @@ const guardProgram = {
           "INSPECTINPUTSCRIPTPUBKEY",
           TAPROOT_VERSION,
           "EQUALVERIFY",
-          "$pinnedProgram",
+          "$requiredProgram",
           "EQUAL",
         ],
       },
@@ -107,7 +107,7 @@ const keys = {
 const owned = ark.contract(ownedProgram, keys);
 const guard = ark.contract(guardProgram, {
   ...keys,
-  pinnedProgram: owned.pkScript.subarray(2),
+  requiredProgram: owned.pkScript.subarray(2),
 });
 
 /** 4. Fetch one coin without assets from each contract that can be spent offchain. */
@@ -135,7 +135,7 @@ const payBack = [
  * coins pass in step 6.
  */
 await guard.functions
-  .pinInputScriptPubKey()
+  .requireInputScriptPubKey()
   .from(guardCoin)
   .from(coinA, owned.unlock.spend())
   .to(payBack)
@@ -152,9 +152,9 @@ await guard.functions
 
 /** 6. Spend coin A as input 0 and the guard as input 1. */
 const { txid } = await guard.functions
-  .pinInputScriptPubKey()
+  .requireInputScriptPubKey()
   .from(coinA, owned.unlock.spend())
   .from(guardCoin)
   .to(payBack)
   .send();
-console.log(`Input 0 matched the pinned witness program: ${EXPLORER_URL}/tx/${txid}`);
+console.log(`Input 0 matched the required witness program: ${EXPLORER_URL}/tx/${txid}`);

@@ -9,9 +9,9 @@ import {
 type Program = arkade.ArkadeContract["program"];
 
 /**
- * A covenant, `pinInputArkadeScript`, that only lets the user move funds when input 0 and input 1
- * carry the same Arkade Script. It constrains the coins spent with it, not its own future outputs,
- * so it is not a recursive covenant.
+ * A covenant, `requireInputArkadeScript`, that only lets the user move funds when input 0 and
+ * input 1 carry the same Arkade Script. It constrains the coins spent with it, not its own future
+ * outputs, so it is not a recursive covenant.
  */
 const program = {
   version: 1,
@@ -23,7 +23,7 @@ const program = {
     { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
-    pinInputArkadeScript: {
+    requireInputArkadeScript: {
       /** Tapscript-level signers: the user and the operator. */
       tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
       /** Covenant clause the operator runs on every spend, before it cosigns. */
@@ -93,7 +93,7 @@ const payBack = coins.map((coin) => ({ script: contract.pkScript, amount: BigInt
  * refuses it. The error doesn't name the cause: the evidence is that the same coins pass in step 6.
  */
 await contract.functions
-  .pinInputArkadeScript()
+  .requireInputArkadeScript()
   .from(coins[0], contract.unlock.differentScript())
   .from(coins[1])
   .to(payBack)
@@ -110,7 +110,7 @@ await contract.functions
 
 /** 6. Spend both coins through the same path, so both inputs carry the same script. */
 const { txid } = await contract.functions
-  .pinInputArkadeScript()
+  .requireInputArkadeScript()
   .from(coins)
   .to(payBack)
   .send();

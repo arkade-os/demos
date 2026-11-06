@@ -12,14 +12,14 @@ type Program = arkade.ArkadeContract["program"];
 /** The hashlock secret. A real one is random and private. */
 const PREIMAGE = new TextEncoder().encode("open-sesame");
 const HASH = new Uint8Array(await crypto.subtle.digest("SHA-256", PREIMAGE));
-/** The hash the covenant pins. `RawWitness` is the encoding the SDK puts in the spend. */
+/** The hash the covenant requires. `RawWitness` is the encoding the SDK puts in the spend. */
 const WITNESS_HASH = arkade.arkadeWitnessHash(RawWitness.encode([PREIMAGE]));
 
 /**
  * One contract with two spending paths:
  *  - `hashlock` spends a coin by revealing the preimage in its Arkade witness.
- *  - `pinInputArkadeWitness` only lets the user move funds when the Arkade witness of input 0
- *    hashes to the pinned value, so input 0 must reveal exactly this preimage.
+ *  - `requireInputArkadeWitness` only lets the user move funds when the Arkade witness of input 0
+ *    hashes to the required value, so input 0 must reveal exactly this preimage.
  */
 const program = {
   version: 1,
@@ -40,10 +40,10 @@ const program = {
       /** Consumes the preimage from its witness: its SHA-256 must equal the committed hash. */
       arkadeScript: { asm: ["SHA256", "$hash", "EQUAL"], witness: ["preimage"] },
     },
-    pinInputArkadeWitness: {
+    requireInputArkadeWitness: {
       /** Tapscript-level signers: the user and the operator. */
       tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
-      /** Reads the witness hash of input 0 and requires it to match the pinned value. */
+      /** Reads the witness hash of input 0 and requires it to equal `witnessHash`. */
       arkadeScript: {
         asm: [0, "INSPECTINPUTARKADEWITNESSHASH", "$witnessHash", "EQUAL"],
       },
@@ -100,12 +100,12 @@ if (coins.length < 2) {
 const payBack = coins.map((coin) => ({ script: contract.pkScript, amount: BigInt(coin.value) }));
 
 /**
- * 5. Try to spend both coins through the pinning path. Input 0 then has no Arkade witness, so the
- * operator refuses the spend. The error doesn't name the cause: the evidence is that the same
- * coins pass in step 6.
+ * 5. Try to spend both coins through `requireInputArkadeWitness`. Input 0 then has no Arkade
+ * witness, so the operator refuses the spend. The error doesn't name the cause: the evidence is
+ * that the same coins pass in step 6.
  */
 await contract.functions
-  .pinInputArkadeWitness()
+  .requireInputArkadeWitness()
   .from(coins)
   .to(payBack)
   .send()
@@ -120,13 +120,13 @@ await contract.functions
   );
 
 /**
- * 6. Spend the first coin through `hashlock` as input 0, and the second through the pinning path
- * as input 1. Order matters: the covenant reads input 0.
+ * 6. Spend the first coin through `hashlock` as input 0, and the second through
+ * `requireInputArkadeWitness` as input 1. Order matters: the covenant reads input 0.
  */
 const { txid } = await contract.functions
-  .pinInputArkadeWitness()
+  .requireInputArkadeWitness()
   .from(coins[0], contract.unlock.hashlock(PREIMAGE))
   .from(coins[1])
   .to(payBack)
   .send();
-console.log(`Input 1 pinned the witness of input 0: ${EXPLORER_URL}/tx/${txid}`);
+console.log(`Input 1 checked the witness of input 0: ${EXPLORER_URL}/tx/${txid}`);

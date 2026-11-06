@@ -18,8 +18,8 @@ const FINAL_SEQUENCE = 0xffffffffn;
 const PAST_TIME = 1_700_000_000n;
 
 /**
- * A covenant, `pinInputSequence`, that only lets the user move funds when input 0 carries the
- * pinned nSequence value.
+ * A covenant, `requireInputSequence`, that only lets the user move funds when input 0 carries the
+ * required nSequence value.
  */
 const program = {
   version: 1,
@@ -32,7 +32,7 @@ const program = {
     { name: "SERVER_EXIT_DELAY", type: "int" },
   ],
   functions: {
-    pinInputSequence: {
+    requireInputSequence: {
       /** Tapscript-level signers: the user and the operator. */
       tapscript: { signers: ["$userPubkey", "$operatorPubkey"] },
       /** Covenant clause the operator runs on every spend, before it cosigns. */
@@ -44,7 +44,7 @@ const program = {
      * The same covenant on a path with an absolute timelock, so step 5 can show a refused spend.
      * Its spends set a locktime, so their inputs don't carry the final sequence.
      */
-    pinInputSequenceWithLocktime: {
+    requireInputSequenceWithLocktime: {
       tapscript: { signers: ["$userPubkey", "$operatorPubkey"], cltv: PAST_TIME },
       arkadeScript: {
         asm: [0, "INSPECTINPUTSEQUENCE", "$sequence", "EQUAL"],
@@ -98,12 +98,12 @@ if (!coin) {
 }
 
 /**
- * 5. Try to spend the coin through the path with a locktime. Input 0 no longer carries the pinned
+ * 5. Try to spend the coin through the path with a locktime. Input 0 no longer carries the required
  * sequence, so the operator refuses the spend. The error doesn't name the cause: the evidence is
  * that the same coin passes in step 6 through the path without a locktime.
  */
 await contract.functions
-  .pinInputSequenceWithLocktime()
+  .requireInputSequenceWithLocktime()
   .from(coin)
   .to(contract.pkScript, BigInt(coin.value))
   .send()
@@ -119,8 +119,8 @@ await contract.functions
 
 /** 6. Spend the coin back to the contract, so the demo can run again. */
 const { txid } = await contract.functions
-  .pinInputSequence()
+  .requireInputSequence()
   .from(coin)
   .to(contract.pkScript, BigInt(coin.value))
   .send();
-console.log(`Input 0 carried the pinned sequence: ${EXPLORER_URL}/tx/${txid}`);
+console.log(`Input 0 carried the required sequence: ${EXPLORER_URL}/tx/${txid}`);
