@@ -1,0 +1,5 @@
+- [-] asset swap only the quoting solver can fill (`asset-swap-directed`)
+  - [ ] mainnet
+    - [ ] typescript
+  - [x] testnet
+    - [x] typescript
